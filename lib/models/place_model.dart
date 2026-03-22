@@ -15,6 +15,7 @@ class PlaceModel {
   final double baseRating;
   final bool isPublished;
   final DateTime? createdAt;
+  final String? routeFileUrl;
 
   PlaceModel({
     required this.id,
@@ -30,6 +31,7 @@ class PlaceModel {
     required this.baseRating,
     this.isPublished = true,
     this.createdAt,
+    this.routeFileUrl,
   });
 
   double? distanceTo;
@@ -50,6 +52,7 @@ class PlaceModel {
       baseRating: (d['baseRating'] ?? 4.0).toDouble(),
       isPublished: d['isPublished'] ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
+      routeFileUrl: d['routeFileUrl'] as String?,
     );
   }
 
@@ -66,6 +69,7 @@ class PlaceModel {
     'baseRating': baseRating,
     'isPublished': isPublished,
     'createdAt': FieldValue.serverTimestamp(),
+    if (routeFileUrl != null) 'routeFileUrl': routeFileUrl,
   };
 
   PlaceType get placeType => placeTypeFromId(type);

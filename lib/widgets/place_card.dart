@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../main.dart';
@@ -38,7 +39,6 @@ class PlaceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
@@ -47,32 +47,17 @@ class PlaceCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     if (place.images.isNotEmpty)
-                      Image.network(
-                        place.images.first,
+                      CachedNetworkImage(
+                        imageUrl: place.images.first,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        placeholder: (_, __) => Container(color: pt.bg),
+                        errorWidget: (_, __, ___) => Container(
                           color: pt.bg,
                           child: Center(
                             child: Text(pt.icon,
                                 style: const TextStyle(fontSize: 40)),
                           ),
                         ),
-                        loadingBuilder: (_, child, prog) {
-                          if (prog == null) return child;
-                          return Container(
-                            color: pt.bg,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value: prog.expectedTotalBytes != null
-                                    ? prog.cumulativeBytesLoaded /
-                                    prog.expectedTotalBytes!
-                                    : null,
-                                color: pt.color,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          );
-                        },
                       )
                     else
                       Container(
@@ -82,7 +67,6 @@ class PlaceCard extends StatelessWidget {
                               style: const TextStyle(fontSize: 40)),
                         ),
                       ),
-                    // Gradient overlay
                     Positioned(
                       bottom: 0, left: 0, right: 0,
                       child: Container(
@@ -99,7 +83,6 @@ class PlaceCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Season badges
                     Positioned(
                       top: 8, left: 8,
                       child: Wrap(
@@ -124,7 +107,6 @@ class PlaceCard extends StatelessWidget {
                         }).toList(),
                       ),
                     ),
-                    // Distance badge
                     if (place.distanceTo != null)
                       Positioned(
                         top: 8, right: 8,
@@ -145,7 +127,6 @@ class PlaceCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    // Type icon bottom-right
                     Positioned(
                       bottom: 8, right: 8,
                       child: Container(
@@ -168,8 +149,6 @@ class PlaceCard extends StatelessWidget {
                 ),
               ),
             ),
-
-            // Info section
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(

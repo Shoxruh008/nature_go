@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/place_model.dart';
-import '../models/review_model.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._();
@@ -12,23 +11,37 @@ class FirebaseService {
   final _db      = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
-  // ── Places ────────────────────────────────────────────────
+  final Map<String, PlaceModel> _placeCache = {};
+
+  List<PlaceModel>? _placesCache;
 
   Stream<List<PlaceModel>> publishedPlaces() {
     return _db
         .collection('places')
         .where('isPublished', isEqualTo: true)
         .snapshots()
-        .map((s) => s.docs.map(PlaceModel.fromFirestore).toList());
+        .map((s) {
+      final places = s.docs.map(PlaceModel.fromFirestore).toList();
+      _placesCache = places;
+      for (final p in places) {
+        _placeCache[p.id] = p;
+      }
+      return places;
+    });
   }
 
   Future<PlaceModel?> getPlace(String id) async {
+    if (_placeCache.containsKey(id)) return _placeCache[id];
+
     final doc = await _db.collection('places').doc(id).get();
     if (!doc.exists) return null;
-    return PlaceModel.fromFirestore(doc);
+    final place = PlaceModel.fromFirestore(doc);
+    _placeCache[place.id] = place;
+    return place;
   }
 
-  /// Upload multiple images to Firebase Storage, return download URLs
+  void invalidateCache(String id) => _placeCache.remove(id);
+
   Future<List<String>> uploadImages(
       List<File> files, {
         required void Function(double progress) onProgress,
@@ -44,7 +57,8 @@ class FirebaseService {
         SettableMetadata(contentType: 'image/jpeg'),
       );
       task.snapshotEvents.listen((snap) {
-        final progress = (i + snap.bytesTransferred / snap.totalBytes) / files.length;
+        final progress =
+            (i + snap.bytesTransferred / snap.totalBytes) / files.length;
         onProgress(progress);
       });
       await task;
@@ -54,24 +68,36 @@ class FirebaseService {
     return urls;
   }
 
-  /// Add new place (isPublished = false, awaiting admin approval)
+  Future<String?> uploadRouteFile(
+      File file, {
+        required String fileName,
+      }) async {
+    try {
+      final ext = fileName.split('.').last.toLowerCase();
+      final contentType = switch (ext) {
+        'gpx'     => 'application/gpx+xml',
+        'kml'     => 'application/vnd.google-earth.kml+xml',
+        'geojson' => 'application/geo+json',
+        _         => 'application/octet-stream',
+      };
+      final storagePath =
+          'routes/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+      final ref = _storage.ref().child(storagePath);
+      await ref.putFile(
+        file,
+        SettableMetadata(
+          contentType: contentType,
+          customMetadata: {'originalName': fileName},
+        ),
+      );
+      return await ref.getDownloadURL();
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<String> addPlace(PlaceModel place) async {
     final ref = await _db.collection('places').add(place.toFirestore());
     return ref.id;
-  }
-
-  // ── Reviews ───────────────────────────────────────────────
-
-  Stream<List<ReviewModel>> reviewsForPlace(String placeId) {
-    return _db
-        .collection('reviews')
-        .where('placeId', isEqualTo: placeId)
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map(ReviewModel.fromFirestore).toList());
-  }
-
-  Future<void> addReview(ReviewModel review) async {
-    await _db.collection('reviews').add(review.toFirestore());
   }
 }

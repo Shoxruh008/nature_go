@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nature_go/screens/home_screen.dart';
-import 'package:yandex_mapkit/yandex_mapkit.dart';
 import 'firebase_options.dart';
 
 void main() async {
