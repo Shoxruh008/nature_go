@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -189,18 +190,38 @@ class _DetailScreenState extends State<DetailScreen> {
             controller: _imgCtrl,
             onPageChanged: (i) => setState(() => _currentImg = i),
             itemCount: p.images.length,
-            itemBuilder: (_, i) => CachedNetworkImage(
-              imageUrl: p.images[i],
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                color: pt.bg,
-                child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 80))),
-              ),
-              errorWidget: (_, __, ___) => Container(
-                color: pt.bg,
-                child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 80))),
-              ),
-            ),
+            itemBuilder: (_, i) => kIsWeb
+                ? Image.network(
+                    p.images[i],
+                    fit: BoxFit.cover,
+                    loadingBuilder: (_, child, progress) =>
+                        progress == null
+                            ? child
+                            : Container(
+                                color: pt.bg,
+                                child: Center(
+                                    child: Text(pt.icon,
+                                        style: const TextStyle(fontSize: 80))),
+                              ),
+                    errorBuilder: (_, __, ___) => Container(
+                      color: pt.bg,
+                      child: Center(
+                          child: Text(pt.icon,
+                              style: const TextStyle(fontSize: 80))),
+                    ),
+                  )
+                : CachedNetworkImage(
+                    imageUrl: p.images[i],
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      color: pt.bg,
+                      child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 80))),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      color: pt.bg,
+                      child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 80))),
+                    ),
+                  ),
           )
         else
           Container(

@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/place_model.dart';
 
 class FirebaseService {
@@ -88,6 +91,62 @@ class FirebaseService {
         SettableMetadata(
           contentType: contentType,
           customMetadata: {'originalName': fileName},
+        ),
+      );
+      return await ref.getDownloadURL();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ─── XFile (web + mobile) dan rasmlarni yuklash ───────────────────────────
+  Future<List<String>> uploadXImages(
+    List<XFile> files, {
+    required void Function(double progress) onProgress,
+  }) async {
+    final urls = <String>[];
+    for (int i = 0; i < files.length; i++) {
+      final bytes = await files[i].readAsBytes();
+      final fileName =
+          'places/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+      final ref = _storage.ref().child(fileName);
+      final task = ref.putData(
+        bytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      task.snapshotEvents.listen((snap) {
+        final progress =
+            (i + snap.bytesTransferred / snap.totalBytes) / files.length;
+        onProgress(progress);
+      });
+      await task;
+      urls.add(await ref.getDownloadURL());
+    }
+    return urls;
+  }
+
+  // ─── PlatformFile (file_picker) dan marshrut faylini yuklash ──────────────
+  Future<String?> uploadRouteFileFromPlatform(PlatformFile file) async {
+    try {
+      // withData:true bo'lganda bytes xotirada bo'ladi (web uchun zarur)
+      final Uint8List? bytes = file.bytes;
+      if (bytes == null) return null;
+
+      final ext = (file.extension ?? '').toLowerCase();
+      final contentType = switch (ext) {
+        'gpx' => 'application/gpx+xml',
+        'kml' => 'application/vnd.google-earth.kml+xml',
+        'geojson' || 'json' => 'application/geo+json',
+        _ => 'application/octet-stream',
+      };
+      final storagePath =
+          'routes/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      final ref = _storage.ref().child(storagePath);
+      await ref.putData(
+        bytes,
+        SettableMetadata(
+          contentType: contentType,
+          customMetadata: {'originalName': file.name},
         ),
       );
       return await ref.getDownloadURL();

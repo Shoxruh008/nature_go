@@ -44,6 +44,8 @@ dependencies:
   firebase_storage: ^13.1.0
   html: ^0.15.6
   cached_network_image: ^3.4.1
+  file_picker: ^10.3.10
+  flutter_map: ^8.2.2
 
 dev_dependencies:
   flutter_test:

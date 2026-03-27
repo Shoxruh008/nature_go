@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -779,15 +780,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   fit: StackFit.expand,
                   children: [
                     p.images.isNotEmpty
-                        ? CachedNetworkImage(
-                        imageUrl: p.images.first,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: pt.bg),
-                        errorWidget: (_, __, ___) => Container(
-                            color: pt.bg,
-                            child: Center(
-                                child: Text(pt.icon,
-                                    style: const TextStyle(fontSize: 40)))))
+                        ? (kIsWeb
+                            ? Image.network(
+                                p.images.first,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (_, child, progress) =>
+                                    progress == null
+                                        ? child
+                                        : Container(color: pt.bg),
+                                errorBuilder: (_, __, ___) => Container(
+                                    color: pt.bg,
+                                    child: Center(
+                                        child: Text(pt.icon,
+                                            style: const TextStyle(fontSize: 40)))))
+                            : CachedNetworkImage(
+                                imageUrl: p.images.first,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(color: pt.bg),
+                                errorWidget: (_, __, ___) => Container(
+                                    color: pt.bg,
+                                    child: Center(
+                                        child: Text(pt.icon,
+                                            style: const TextStyle(fontSize: 40))))))
                         : Container(
                         color: pt.bg,
                         child: Center(
@@ -901,16 +915,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           width: 88,
                           height: 88,
                           child: p.images.isNotEmpty
-                              ? CachedNetworkImage(
-                              imageUrl: p.images.first,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: pt.bg),
-                              errorWidget: (_, __, ___) => Container(
-                                  color: pt.bg,
-                                  child: Center(
-                                      child: Text(pt.icon,
-                                          style: const TextStyle(
-                                              fontSize: 26)))))
+                              ? (kIsWeb
+                                  ? Image.network(
+                                      p.images.first,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (_, child, progress) =>
+                                          progress == null
+                                              ? child
+                                              : Container(color: pt.bg),
+                                      errorBuilder: (_, __, ___) => Container(
+                                          color: pt.bg,
+                                          child: Center(
+                                              child: Text(pt.icon,
+                                                  style: const TextStyle(
+                                                      fontSize: 26)))))
+                                  : CachedNetworkImage(
+                                      imageUrl: p.images.first,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) =>
+                                          Container(color: pt.bg),
+                                      errorWidget: (_, __, ___) => Container(
+                                          color: pt.bg,
+                                          child: Center(
+                                              child: Text(pt.icon,
+                                                  style: const TextStyle(
+                                                      fontSize: 26))))))
                               : Container(
                               color: pt.bg,
                               child: Center(

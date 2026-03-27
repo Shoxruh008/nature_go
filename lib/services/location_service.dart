@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
 
+/// Geocoding uchun Nominatim (OpenStreetMap) API ishlatiladi.
+/// geocoding paketi web'da ishlamaydi — shu sababli to'liq almashtirildi.
 class LocationService {
   static final LocationService _instance = LocationService._();
   static LocationService get instance => _instance;
@@ -12,6 +15,14 @@ class LocationService {
 
   final Map<String, String> _addressCache = {};
   final Map<String, String> _cityCache = {};
+
+  static const String _nominatimBase = 'https://nominatim.openstreetmap.org';
+  static const Map<String, String> _headers = {
+    'User-Agent': 'NatureGoApp/1.0',
+    'Accept-Language': 'uz,ru,en',
+  };
+
+  // ─── Joylashuv ruxsati ────────────────────────────────────────────────────
 
   Future<bool> isServiceEnabled() =>
       Geolocator.isLocationServiceEnabled();
@@ -33,8 +44,7 @@ class LocationService {
   Future<void> openLocationSettings() =>
       Geolocator.openLocationSettings();
 
-  Future<void> openSettings() =>
-      Geolocator.openAppSettings();
+  Future<void> openSettings() => Geolocator.openAppSettings();
 
   Future<Position?> getCurrentPosition() async {
     try {
@@ -55,21 +65,20 @@ class LocationService {
     }
   }
 
+  // ─── Nominatim: koordinatdan shahar nomi ──────────────────────────────────
+
   Future<String?> getCityName(double lat, double lng) async {
     final key = '${lat.toStringAsFixed(4)},${lng.toStringAsFixed(4)}';
     if (_cityCache.containsKey(key)) return _cityCache[key];
     try {
-      final placemarks = await placemarkFromCoordinates(lat, lng);
-      if (placemarks.isEmpty) return null;
-      final p = placemarks.first;
-      String? result;
-      if (p.subLocality != null && p.subLocality!.isNotEmpty) {
-        result = p.subLocality;
-      } else if (p.locality != null && p.locality!.isNotEmpty) {
-        result = p.locality;
-      } else if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty) {
-        result = p.administrativeArea;
-      }
+      final data = await _reverseGeocode(lat, lng);
+      if (data == null) return null;
+      final addr = data['address'] as Map<String, dynamic>?;
+      final result = addr?['city'] as String? ??
+          addr?['town'] as String? ??
+          addr?['village'] as String? ??
+          addr?['county'] as String? ??
+          addr?['state'] as String?;
       if (result != null) _cityCache[key] = result;
       return result;
     } catch (_) {
@@ -77,67 +86,91 @@ class LocationService {
     }
   }
 
+  // ─── Nominatim: koordinatdan to'liq manzil ────────────────────────────────
+
   Future<String?> getFullAddress(double lat, double lng) async {
     final key = '${lat.toStringAsFixed(4)},${lng.toStringAsFixed(4)}';
     if (_addressCache.containsKey(key)) return _addressCache[key];
     try {
-      final placemarks = await placemarkFromCoordinates(lat, lng);
-      if (placemarks.isEmpty) return null;
-      final p = placemarks.first;
-      final parts = <String>[];
-      if (p.name != null &&
-          p.name!.isNotEmpty &&
-          p.name != p.locality) parts.add(p.name!);
-      if (p.locality != null && p.locality!.isNotEmpty) {
-        parts.add(p.locality!);
+      final data = await _reverseGeocode(lat, lng);
+      if (data == null) return null;
+      // display_name odatda tayyor, to'liq manzil
+      final display = data['display_name'] as String?;
+      if (display != null && display.isNotEmpty) {
+        // Faqat dastlabki 3 bo'limni olamiz (ortiqcha uzun bo'lmasligi uchun)
+        final short = display.split(', ').take(4).join(', ');
+        _addressCache[key] = short;
+        return short;
       }
-      if (p.administrativeArea != null &&
-          p.administrativeArea!.isNotEmpty) {
-        parts.add(p.administrativeArea!);
-      }
-      if (p.country != null && p.country!.isNotEmpty) {
-        parts.add(p.country!);
-      }
-      final result = parts.isNotEmpty ? parts.join(', ') : null;
-      if (result != null) _addressCache[key] = result;
-      return result;
+      return null;
     } catch (_) {
       return null;
     }
   }
 
+  // ─── Nominatim: matn orqali qidirish ─────────────────────────────────────
+
   Future<List<LocationResult>> searchByAddress(String query) async {
+    if (query.trim().isEmpty) return [];
     try {
-      final locations = await locationFromAddress(query);
-      final results = <LocationResult>[];
-      for (final loc in locations.take(5)) {
-        final name = await getCityName(loc.latitude, loc.longitude);
-        results.add(LocationResult(
-          lat: loc.latitude,
-          lng: loc.longitude,
-          label: name ?? query,
-        ));
-      }
-      return results;
+      final uri = Uri.parse('$_nominatimBase/search').replace(
+        queryParameters: {
+          'q': query,
+          'format': 'json',
+          'limit': '6',
+          'addressdetails': '1',
+          'countrycodes': 'uz', // Uzbekiston prioriteti
+        },
+      );
+      final response = await http.get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return [];
+      final list = jsonDecode(response.body) as List<dynamic>;
+      return list.map((item) {
+        final m = item as Map<String, dynamic>;
+        final lat = double.tryParse(m['lat'] as String? ?? '') ?? 0;
+        final lng = double.tryParse(m['lon'] as String? ?? '') ?? 0;
+        final label = (m['display_name'] as String? ?? '')
+            .split(', ')
+            .take(3)
+            .join(', ');
+        return LocationResult(lat: lat, lng: lng, label: label);
+      }).toList();
     } catch (_) {
       return [];
     }
   }
 
+  // ─── Ichki: reverse geocode ───────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> _reverseGeocode(double lat, double lng) async {
+    final uri = Uri.parse('$_nominatimBase/reverse').replace(
+      queryParameters: {
+        'lat': lat.toString(),
+        'lon': lng.toString(),
+        'format': 'json',
+        'addressdetails': '1',
+      },
+    );
+    final response = await http.get(uri, headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) return null;
+    return jsonDecode(response.body) as Map<String, dynamic>?;
+  }
+
+  // ─── Masofa hisobi (Haversine) ────────────────────────────────────────────
+
   static double distanceBetween(
-      double lat1,
-      double lon1,
-      double lat2,
-      double lon2,
-      ) {
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
     const r = 6371.0;
     final dLat = _toRad(lat2 - lat1);
     final dLon = _toRad(lon2 - lon1);
     final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_toRad(lat1)) *
-            cos(_toRad(lat2)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
+        cos(_toRad(lat1)) * cos(_toRad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return r * c;
   }
@@ -155,6 +188,5 @@ class LocationResult {
   final double lat;
   final double lng;
   final String label;
-  const LocationResult(
-      {required this.lat, required this.lng, required this.label});
+  const LocationResult({required this.lat, required this.lng, required this.label});
 }

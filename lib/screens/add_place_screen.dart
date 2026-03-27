@@ -1,7 +1,8 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../main.dart';
 import '../models/place_model.dart';
 import '../services/firebase_service.dart';
@@ -46,10 +47,11 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   List<String> _selectedSeasons = [];
   List<String> _selectedTags = [];
 
-  final List<File> _pickedImages = [];
+  // XFile ishlatiladi — web + mobile uchun mos
+  final List<XFile> _pickedImages = [];
   final ImagePicker _picker = ImagePicker();
 
-  File? _routeFile;
+  PlatformFile? _routeFile;  // file_picker paketi (web + mobile)
   String? _routeFileName;
   bool _routeUploading = false;
 
@@ -59,8 +61,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
 
   String? _resolvedAddress;
   bool _resolvingAddress = false;
-
-  static const _fileChannel = MethodChannel('app/file_picker');
 
   static const List<String> _allTags = [
     'hiking', 'camping', 'picnic', 'swimming',
@@ -102,7 +102,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     if (result.isEmpty) return;
     setState(() {
       for (final x in result) {
-        if (_pickedImages.length < 8) _pickedImages.add(File(x.path));
+        if (_pickedImages.length < 8) _pickedImages.add(x); // XFile
       }
     });
   }
@@ -113,7 +113,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         source: ImageSource.camera, imageQuality: 85);
     if (result == null) return;
     if (_pickedImages.length < 8) {
-      setState(() => _pickedImages.add(File(result.path)));
+      setState(() => _pickedImages.add(result)); // XFile
     }
   }
 
@@ -122,28 +122,28 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     setState(() => _pickedImages.removeAt(index));
   }
 
+  // file_picker paketi — web + mobile uchun to'g'ri ishlaydi
   Future<void> _pickRouteFile() async {
     HapticFeedback.selectionClick();
     try {
-      final Map? result = await _fileChannel.invokeMethod('pickFile');
-      if (result == null) return;
-      final path = result['path'] as String?;
-      final name = result['name'] as String?;
-      if (path == null || name == null) return;
-      final ext = name.split('.').last.toLowerCase();
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _kRouteExtensions,
+        withData: true, // web uchun zarur: bytes ni xotiraga oladi
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final ext = (file.extension ?? '').toLowerCase();
       if (!_kRouteExtensions.contains(ext)) {
         if (mounted) _showSnack('Faqat GPX, KML yoki GeoJSON fayl tanlang', error: true);
         return;
       }
       setState(() {
-        _routeFile = File(path);
-        _routeFileName = name;
+        _routeFile = file;
+        _routeFileName = file.name;
       });
-    } on PlatformException catch (e) {
-      if (e.code == 'CANCELLED') return;
-      if (mounted) _showSnack('Faylni ochib bo\'lmadi: ${e.message}', error: true);
-    } catch (_) {
-      if (mounted) _showSnack('Faylni ochib bo\'lmadi', error: true);
+    } catch (e) {
+      if (mounted) _showSnack('Faylni ochib bo\'lmadi: $e', error: true);
     }
   }
 
@@ -190,17 +190,18 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     HapticFeedback.mediumImpact();
 
     try {
-      final imageUrls = await FirebaseService.instance.uploadImages(
+      // XFile sifatida yuklash — web + mobile uchun mos
+      final imageUrls = await FirebaseService.instance.uploadXImages(
         _pickedImages,
         onProgress: (p) => setState(() => _uploadProgress = p),
       );
       setState(() => _uploading = false);
 
       String? routeUrl;
-      if (_routeFile != null && _routeFileName != null) {
+      if (_routeFile != null) {
         setState(() => _routeUploading = true);
-        routeUrl = await FirebaseService.instance.uploadRouteFile(
-          _routeFile!, fileName: _routeFileName!,
+        routeUrl = await FirebaseService.instance.uploadRouteFileFromPlatform(
+          _routeFile!,
         );
         setState(() => _routeUploading = false);
       }
@@ -218,11 +219,14 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
 
       await FirebaseService.instance.addPlace(place);
       if (mounted) {
+        setState(() => _loading = false);
         Navigator.pop(context, '"${place.name}" qo\'shildi! Admin tasdiqlashini kuting.');
       }
     } catch (e) {
-      setState(() { _loading = false; _uploading = false; _routeUploading = false; });
-      if (mounted) _showSnack('Xato: $e', error: true);
+      if (mounted) {
+        setState(() { _loading = false; _uploading = false; _routeUploading = false; });
+        _showSnack('Xato: $e', error: true);
+      }
     }
   }
 
@@ -685,12 +689,29 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     );
   }
 
-  Widget _imageThumb(File file, int index) {
+  Widget _imageThumb(XFile file, int index) {
     return Stack(
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: Image.file(file, width: 80, height: 80, fit: BoxFit.cover),
+          child: FutureBuilder<Uint8List>(
+            future: file.readAsBytes(),
+            builder: (_, snap) {
+              if (snap.hasData) {
+                return Image.memory(snap.data!,
+                    width: 80, height: 80, fit: BoxFit.cover);
+              }
+              return Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7F5),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.image_rounded,
+                    color: AppTheme.textSecondary, size: 28),
+              );
+            },
+          ),
         ),
         Positioned(
           top: 3, right: 3,
@@ -760,8 +781,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       );
 
   Widget _buildRouteFilePicker() {
-    if (_routeFile != null && _routeFileName != null) {
-      final ext = _routeFileName!.split('.').last.toUpperCase();
+    if (_routeFile != null) {
+      final ext = (_routeFile!.extension ?? '').toUpperCase();
+      final name = _routeFile!.name;
       final color = _routeExtColor(ext);
       return Container(
         padding: const EdgeInsets.all(12),
@@ -784,7 +806,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_routeFileName!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  Text(name,
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textMain)),
                   const SizedBox(height: 3),
                   Row(children: [
