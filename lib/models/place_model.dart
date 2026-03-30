@@ -16,6 +16,7 @@ class PlaceModel {
   final bool isPublished;
   final DateTime? createdAt;
   final String? routeFileUrl;
+  final String? videoUrl;
 
   PlaceModel({
     required this.id,
@@ -32,6 +33,7 @@ class PlaceModel {
     this.isPublished = true,
     this.createdAt,
     this.routeFileUrl,
+    this.videoUrl,
   });
 
   double? distanceTo;
@@ -53,6 +55,7 @@ class PlaceModel {
       isPublished: d['isPublished'] ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
       routeFileUrl: d['routeFileUrl'] as String?,
+      videoUrl: d['videoUrl'] as String?,
     );
   }
 
@@ -70,6 +73,7 @@ class PlaceModel {
     'isPublished': isPublished,
     'createdAt': FieldValue.serverTimestamp(),
     if (routeFileUrl != null) 'routeFileUrl': routeFileUrl,
+    if (videoUrl != null) 'videoUrl': videoUrl,
   };
 
   PlaceType get placeType => placeTypeFromId(type);
@@ -100,6 +104,7 @@ final List<PlaceType> kPlaceTypes = [
   PlaceType(id: 'orollar', label: 'Orollar', icon: '🏝️', color: const Color(0xFFE65100), bg: const Color(0xFFFFF3E0)),
   PlaceType(id: 'sohillar', label: 'Sohillar', icon: '🌊', color: const Color(0xFF00695C), bg: const Color(0xFFE0F2F1)),
   PlaceType(id: 'chollar', label: "Cho'llar", icon: '🏜️', color: const Color(0xFFF57F17), bg: const Color(0xFFFFFDE7)),
+  PlaceType(id: 'gorlar', label: "G'orlar", icon: '🪨', color: const Color(0xFF5D4037), bg: const Color(0xFFEFEBE9)),
 ];
 
 PlaceType placeTypeFromId(String id) {
@@ -136,6 +141,7 @@ const Map<String, String> kTagUz = {
   'trekking': 'Treking',
   'forest': "O'rmon",
   'river': 'Daryo',
+  'lake': "Ko'l",
   'valley': 'Vodiy',
   'walking': 'Yurish',
   'botanical': 'Botanika',

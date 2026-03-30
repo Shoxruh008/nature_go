@@ -32,11 +32,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
   bool _loadingLabel = false;
   bool _loadingGps = false;
 
-  // Xaritada "center crosshair" uchun joriy markaz
   late double _centerLat;
   late double _centerLng;
 
-  // Qidiruv
   final TextEditingController _searchCtrl = TextEditingController();
   List<LocationResult> _searchResults = [];
   bool _searching = false;
@@ -65,8 +63,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     super.dispose();
   }
 
-  // ─── Manzil aniqlash ──────────────────────────────────────────────────────
-
   Future<void> _resolveLabel(double lat, double lng) async {
     setState(() => _loadingLabel = true);
     final label = await LocationService.instance.getFullAddress(lat, lng);
@@ -77,8 +73,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
       });
     }
   }
-
-  // ─── GPS joylashuv ────────────────────────────────────────────────────────
 
   Future<void> _goToMyLocation() async {
     setState(() => _loadingGps = true);
@@ -100,7 +94,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     }
   }
 
-  // ─── Xaritaga tap ────────────────────────────────────────────────────────
 
   void _onMapTap(TapPosition _, LatLng ll) {
     HapticFeedback.selectionClick();
@@ -116,8 +109,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     _resolveLabel(ll.latitude, ll.longitude);
   }
 
-  // ─── Markazni tasdiqlash ─────────────────────────────────────────────────
-
   void _confirmCenter() {
     HapticFeedback.mediumImpact();
     final center = _mapController.camera.center;
@@ -131,8 +122,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     _resolveLabel(center.latitude, center.longitude);
   }
 
-  // ─── Xarita siljishi ─────────────────────────────────────────────────────
-
   void _onPositionChanged(MapCamera camera, bool hasGesture) {
     if (hasGesture) {
       setState(() {
@@ -141,8 +130,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
       });
     }
   }
-
-  // ─── Qidiruv ──────────────────────────────────────────────────────────────
 
   void _onSearchChanged(String q) {
     _debounce?.cancel();
@@ -173,8 +160,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     });
   }
 
-  // ─── Tasdiqlash ───────────────────────────────────────────────────────────
-
   void _confirmAndPop() {
     if (_pickedLat == null || _loadingLabel) return;
     HapticFeedback.mediumImpact();
@@ -189,8 +174,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
     );
   }
 
-  // ─── UI ──────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).padding.bottom;
@@ -204,7 +187,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
         backgroundColor: Colors.white,
         body: Stack(
           children: [
-            // ── OpenStreetMap xaritasi ──────────────────────────────────────
             Positioned.fill(
               child: FlutterMap(
                 mapController: _mapController,
@@ -221,7 +203,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                     userAgentPackageName: 'com.naturego.app',
                     maxZoom: 19,
                   ),
-                  // Tanlangan joy markeri
                   if (_pickedLat != null && _pickedLng != null)
                     MarkerLayer(
                       markers: [
@@ -264,8 +245,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 ],
               ),
             ),
-
-            // ── Tepadan gradient ───────────────────────────────────────────
             Positioned(
               top: 0, left: 0, right: 0, height: 130,
               child: DecoratedBox(
@@ -281,8 +260,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 ),
               ),
             ),
-
-            // ── Yuqori panel: ortga + qidiruv ─────────────────────────────
             SafeArea(
               child: Column(
                 children: [
@@ -290,7 +267,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
                     child: Row(
                       children: [
-                        // Ortga
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Container(
@@ -310,7 +286,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        // Qidiruv maydoni
                         Expanded(
                           child: GestureDetector(
                             onTap: () => setState(() => _showSearch = true),
@@ -395,8 +370,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                       ],
                     ),
                   ),
-
-                  // Qidiruv natijalari
                   if (_searchResults.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.fromLTRB(68, 6, 16, 0),
@@ -427,8 +400,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 ],
               ),
             ),
-
-            // ── Markazda crosshair + "Belgilash" tugmasi ──────────────────
             Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -479,8 +450,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 ],
               ),
             ),
-
-            // ── GPS tugmasi ────────────────────────────────────────────────
             Positioned(
               right: 16,
               bottom: 220,
@@ -508,8 +477,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 ),
               ),
             ),
-
-            // ── Pastki panel ───────────────────────────────────────────────
             Positioned(
               bottom: 0, left: 0, right: 0,
               child: Container(
@@ -528,7 +495,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Handle
                     Container(
                       width: 36, height: 4,
                       margin: const EdgeInsets.only(bottom: 16),
@@ -536,8 +502,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                           color: const Color(0xFFE0E0E0),
                           borderRadius: BorderRadius.circular(2)),
                     ),
-
-                    // Tanlangan joy kartasi
                     if (_pickedLat != null) ...[
                       Container(
                         padding: const EdgeInsets.all(14),
@@ -623,8 +587,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                         ]),
                       ),
                     ],
-
-                    // Tasdiqlash tugmasi
                     SizedBox(
                       width: double.infinity, height: 52,
                       child: ElevatedButton(
@@ -665,7 +627,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
   }
 }
 
-// ─── Marker dum shakli ─────────────────────────────────────────────────────
 class _MarkerTailPainter extends CustomPainter {
   final Color color;
   _MarkerTailPainter(this.color);

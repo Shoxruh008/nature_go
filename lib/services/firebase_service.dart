@@ -99,7 +99,6 @@ class FirebaseService {
     }
   }
 
-  // ─── XFile (web + mobile) dan rasmlarni yuklash ───────────────────────────
   Future<List<String>> uploadXImages(
     List<XFile> files, {
     required void Function(double progress) onProgress,
@@ -125,10 +124,8 @@ class FirebaseService {
     return urls;
   }
 
-  // ─── PlatformFile (file_picker) dan marshrut faylini yuklash ──────────────
   Future<String?> uploadRouteFileFromPlatform(PlatformFile file) async {
     try {
-      // withData:true bo'lganda bytes xotirada bo'ladi (web uchun zarur)
       final Uint8List? bytes = file.bytes;
       if (bytes == null) return null;
 

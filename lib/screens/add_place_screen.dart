@@ -47,11 +47,12 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   List<String> _selectedSeasons = [];
   List<String> _selectedTags = [];
 
-  // XFile ishlatiladi — web + mobile uchun mos
   final List<XFile> _pickedImages = [];
   final ImagePicker _picker = ImagePicker();
 
-  PlatformFile? _routeFile;  // file_picker paketi (web + mobile)
+  final _videoCtrl = TextEditingController();
+
+  PlatformFile? _routeFile;
   String? _routeFileName;
   bool _routeUploading = false;
 
@@ -66,6 +67,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     'hiking', 'camping', 'picnic', 'swimming',
     'skiing', 'boating', 'wildlife', 'trekking',
     'mountain', 'forest', 'river', 'valley',
+    'waterfall', 'lake', 'walking', 'botanical',
+    'nature reserve',
   ];
 
   @override
@@ -122,14 +125,13 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     setState(() => _pickedImages.removeAt(index));
   }
 
-  // file_picker paketi — web + mobile uchun to'g'ri ishlaydi
   Future<void> _pickRouteFile() async {
     HapticFeedback.selectionClick();
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: _kRouteExtensions,
-        withData: true, // web uchun zarur: bytes ni xotiraga oladi
+        withData: true,
       );
       if (result == null || result.files.isEmpty) return;
       final file = result.files.first;
@@ -190,7 +192,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     HapticFeedback.mediumImpact();
 
     try {
-      // XFile sifatida yuklash — web + mobile uchun mos
       final imageUrls = await FirebaseService.instance.uploadXImages(
         _pickedImages,
         onProgress: (p) => setState(() => _uploadProgress = p),
@@ -214,7 +215,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         type: _selectedType, seasonTypes: _selectedSeasons,
         lat: lat, lng: lng, images: imageUrls,
         description: _descCtrl.text.trim(), tags: _selectedTags,
-        baseRating: 0, isPublished: false, routeFileUrl: routeUrl,
+        baseRating: 0, isPublished: false, routeFileUrl: routeUrl, videoUrl: _videoCtrl.text.trim().isEmpty ? null : _videoCtrl.text.trim(),
       );
 
       await FirebaseService.instance.addPlace(place);
@@ -246,6 +247,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     _descCtrl.dispose();
     _latCtrl.dispose();
     _lngCtrl.dispose();
+    _videoCtrl.dispose();
     super.dispose();
   }
 
@@ -335,6 +337,12 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                           maxLines: 3,
                           style: const TextStyle(fontSize: 13),
                           decoration: _inputDec('Joy haqida qisqacha yozing...', null),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _videoCtrl,
+                          style: const TextStyle(fontSize: 13),
+                          decoration: _inputDec('Video link (ixtiyoriy)', Icons.video_call),
                         ),
                       ]),
                       const SizedBox(height: 12),

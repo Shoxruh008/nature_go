@@ -3,8 +3,6 @@ import 'dart:math';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
-/// Geocoding uchun Nominatim (OpenStreetMap) API ishlatiladi.
-/// geocoding paketi web'da ishlamaydi — shu sababli to'liq almashtirildi.
 class LocationService {
   static final LocationService _instance = LocationService._();
   static LocationService get instance => _instance;
@@ -21,8 +19,6 @@ class LocationService {
     'User-Agent': 'NatureGoApp/1.0',
     'Accept-Language': 'uz,ru,en',
   };
-
-  // ─── Joylashuv ruxsati ────────────────────────────────────────────────────
 
   Future<bool> isServiceEnabled() =>
       Geolocator.isLocationServiceEnabled();
@@ -65,8 +61,6 @@ class LocationService {
     }
   }
 
-  // ─── Nominatim: koordinatdan shahar nomi ──────────────────────────────────
-
   Future<String?> getCityName(double lat, double lng) async {
     final key = '${lat.toStringAsFixed(4)},${lng.toStringAsFixed(4)}';
     if (_cityCache.containsKey(key)) return _cityCache[key];
@@ -86,18 +80,14 @@ class LocationService {
     }
   }
 
-  // ─── Nominatim: koordinatdan to'liq manzil ────────────────────────────────
-
   Future<String?> getFullAddress(double lat, double lng) async {
     final key = '${lat.toStringAsFixed(4)},${lng.toStringAsFixed(4)}';
     if (_addressCache.containsKey(key)) return _addressCache[key];
     try {
       final data = await _reverseGeocode(lat, lng);
       if (data == null) return null;
-      // display_name odatda tayyor, to'liq manzil
       final display = data['display_name'] as String?;
       if (display != null && display.isNotEmpty) {
-        // Faqat dastlabki 3 bo'limni olamiz (ortiqcha uzun bo'lmasligi uchun)
         final short = display.split(', ').take(4).join(', ');
         _addressCache[key] = short;
         return short;
@@ -108,8 +98,6 @@ class LocationService {
     }
   }
 
-  // ─── Nominatim: matn orqali qidirish ─────────────────────────────────────
-
   Future<List<LocationResult>> searchByAddress(String query) async {
     if (query.trim().isEmpty) return [];
     try {
@@ -119,7 +107,7 @@ class LocationService {
           'format': 'json',
           'limit': '6',
           'addressdetails': '1',
-          'countrycodes': 'uz', // Uzbekiston prioriteti
+          'countrycodes': 'uz',
         },
       );
       final response = await http.get(uri, headers: _headers)
@@ -141,8 +129,6 @@ class LocationService {
     }
   }
 
-  // ─── Ichki: reverse geocode ───────────────────────────────────────────────
-
   Future<Map<String, dynamic>?> _reverseGeocode(double lat, double lng) async {
     final uri = Uri.parse('$_nominatimBase/reverse').replace(
       queryParameters: {
@@ -157,8 +143,6 @@ class LocationService {
     if (response.statusCode != 200) return null;
     return jsonDecode(response.body) as Map<String, dynamic>?;
   }
-
-  // ─── Masofa hisobi (Haversine) ────────────────────────────────────────────
 
   static double distanceBetween(
     double lat1,

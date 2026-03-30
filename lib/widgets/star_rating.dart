@@ -41,7 +41,6 @@ class StarRating extends StatelessWidget {
   }
 }
 
-/// Interactive star picker (for review form)
 class StarPicker extends StatefulWidget {
   final double initialValue;
   final ValueChanged<double> onChanged;

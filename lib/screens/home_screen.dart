@@ -1160,6 +1160,11 @@ class _AddPromoSheet extends StatelessWidget {
                 color: const Color(0xFFE0E0E0),
                 borderRadius: BorderRadius.circular(2)),
           ),
+          Image.asset(
+            'assets/c1.png',
+            width: 150,
+            height: 150,
+          ),
           const Text(
             "Ko'proq joy qo'shing",
             textAlign: TextAlign.center,
@@ -1169,39 +1174,14 @@ class _AddPromoSheet extends StatelessWidget {
                 color: AppTheme.textMain,
                 letterSpacing: -0.3),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           const Text(
-            'va bonuslarga ega bo\'ling!',
+            'Ko\'proq yangi joy qo\'shing , agar admin tomonidan tasdiqlanib dasturga qo\'shilsa biz sizga pul mukofotini taqdim qilamiz!!',
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 15,
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              _bonusCard(
-                '🏅',
-                'Faol\nfoydalanuvchi',
-                const Color(0xFFFFF8E1),
-                const Color(0xFFD97706),
-              ),
-              const SizedBox(width: 10),
-              _bonusCard(
-                '⭐',
-                'Reyting\noshadi',
-                const Color(0xFFE8F5E9),
-                AppTheme.primary,
-              ),
-              const SizedBox(width: 10),
-              _bonusCard(
-                '🎁',
-                'Maxsus\nsovg\'a',
-                const Color(0xFFEDE7F6),
-                const Color(0xFF7C3AED),
-              ),
-            ],
           ),
           const SizedBox(height: 28),
           SizedBox(
