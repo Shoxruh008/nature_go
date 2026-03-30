@@ -871,6 +871,7 @@ class _ActionBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(25),
           boxShadow: [BoxShadow(color: color.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
         ),
+
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(icon, color: Colors.white, size: 18),
           const SizedBox(width: 7),
