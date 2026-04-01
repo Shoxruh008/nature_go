@@ -494,7 +494,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       },
     );
   }
-
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: const Color(0xFFF5F7F5),
