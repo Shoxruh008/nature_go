@@ -17,6 +17,7 @@ class PlaceModel {
   final DateTime? createdAt;
   final String? routeFileUrl;
   final String? videoUrl;
+  final String? phone;
 
   PlaceModel({
     required this.id,
@@ -34,6 +35,7 @@ class PlaceModel {
     this.createdAt,
     this.routeFileUrl,
     this.videoUrl,
+    this.phone,
   });
 
   double? distanceTo;
@@ -56,6 +58,7 @@ class PlaceModel {
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
       routeFileUrl: d['routeFileUrl'] as String?,
       videoUrl: d['videoUrl'] as String?,
+      phone: d['phone'] as String?,
     );
   }
 
@@ -74,6 +77,7 @@ class PlaceModel {
     'createdAt': FieldValue.serverTimestamp(),
     if (routeFileUrl != null) 'routeFileUrl': routeFileUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,
+    if (phone != null) 'phone': phone,
   };
 
   PlaceType get placeType => placeTypeFromId(type);

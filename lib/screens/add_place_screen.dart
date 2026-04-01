@@ -41,6 +41,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   final _descCtrl = TextEditingController();
   final _latCtrl = TextEditingController();
   final _lngCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
 
   String _selectedType = 'toglar';
   String? _selectedRegion;
@@ -105,7 +106,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     if (result.isEmpty) return;
     setState(() {
       for (final x in result) {
-        if (_pickedImages.length < 8) _pickedImages.add(x); // XFile
+        if (_pickedImages.length < 8) _pickedImages.add(x);
       }
     });
   }
@@ -116,7 +117,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         source: ImageSource.camera, imageQuality: 85);
     if (result == null) return;
     if (_pickedImages.length < 8) {
-      setState(() => _pickedImages.add(result)); // XFile
+      setState(() => _pickedImages.add(result));
     }
   }
 
@@ -210,12 +211,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       final lat = double.parse(_latCtrl.text.trim());
       final lng = double.parse(_lngCtrl.text.trim());
 
+      final fullPhone = '+998${_phoneCtrl.text.trim()}';
+
       final place = PlaceModel(
         id: '', name: _nameCtrl.text.trim(), region: _selectedRegion!,
         type: _selectedType, seasonTypes: _selectedSeasons,
         lat: lat, lng: lng, images: imageUrls,
         description: _descCtrl.text.trim(), tags: _selectedTags,
-        baseRating: 0, isPublished: false, routeFileUrl: routeUrl, videoUrl: _videoCtrl.text.trim().isEmpty ? null : _videoCtrl.text.trim(),
+        baseRating: 0, isPublished: false, routeFileUrl: routeUrl,
+        videoUrl: _videoCtrl.text.trim().isEmpty ? null : _videoCtrl.text.trim(),
+        phone: fullPhone,
       );
 
       await FirebaseService.instance.addPlace(place);
@@ -248,6 +253,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     _latCtrl.dispose();
     _lngCtrl.dispose();
     _videoCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -282,13 +288,13 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                       ]),
                       const SizedBox(height: 12),
                       _card([
-                        _secTitle('Viloyat *', '🗺️'),
+                        _secTitle('Viloyat', '🗺️'),
                         const SizedBox(height: 12),
                         _buildRegionDropdown(),
                       ]),
                       const SizedBox(height: 12),
                       _card([
-                        _secTitle('Joy turi *', '🏷️'),
+                        _secTitle('Joy turi', '🏷️'),
                         const SizedBox(height: 12),
                         _buildTypePicker(),
                       ]),
@@ -300,7 +306,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                       ]),
                       const SizedBox(height: 12),
                       _card([
-                        _secTitle('Joylashuv *', '📍'),
+                        _secTitle('Joylashuv', '📍'),
                         const SizedBox(height: 12),
                         _buildMapPickerBtn(),
                         const SizedBox(height: 10),
@@ -312,7 +318,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                       ]),
                       const SizedBox(height: 12),
                       _card([
-                        _secTitle('Rasmlar *', '🖼️'),
+                        _secTitle('Rasmlar', '🖼️'),
                         const SizedBox(height: 4),
                         Text('Qurilmadan tanlang (max 8 ta)',
                             style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
@@ -350,6 +356,17 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                         _secTitle('Teglar', '🏷️'),
                         const SizedBox(height: 12),
                         _buildTagPicker(),
+                      ]),
+                      const SizedBox(height: 12),
+                      _card([
+                        _secTitle('Telefon raqam', '📞'),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Siz bilan bog\'lanishimiz uchun telefon raqamingizni qoldiring',
+                          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, height: 1.4),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildPhoneField(),
                       ]),
                       const SizedBox(height: 16),
                       Container(
@@ -407,6 +424,74 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return TextFormField(
+      controller: _phoneCtrl,
+      keyboardType: TextInputType.phone,
+      style: const TextStyle(fontSize: 13, color: AppTheme.textMain),
+      maxLength: 9,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+      ],
+      decoration: InputDecoration(
+        counterText: '',
+        hintText: '__ ___ ____',
+        hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        filled: true,
+        fillColor: const Color(0xFFF5F7F5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        contentPadding: EdgeInsets.zero,
+        prefixIcon: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.primary.withOpacity(0.08),
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(width: 6),
+              Text(
+                '+998',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primary,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+          ),
+        ),
+      ),
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Telefon raqam majburiy';
+        if (v.trim().length != 9) return 'Telefon raqam formati no\'to\'g\'ri';
+        return null;
+      },
     );
   }
 
