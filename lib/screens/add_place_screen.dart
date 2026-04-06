@@ -211,7 +211,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       final lat = double.parse(_latCtrl.text.trim());
       final lng = double.parse(_lngCtrl.text.trim());
 
-      final fullPhone = '+998${_phoneCtrl.text.trim()}';
+      final phoneText = _phoneCtrl.text.trim();
+      final fullPhone = phoneText.isEmpty ? null : '+998$phoneText';
 
       final place = PlaceModel(
         id: '', name: _nameCtrl.text.trim(), region: _selectedRegion!,
@@ -488,7 +489,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         ),
       ),
       validator: (v) {
-        if (v == null || v.trim().isEmpty) return 'Telefon raqam majburiy';
+        if (v == null || v.trim().isEmpty) return null; // bo'sh bo'lsa OK
         if (v.trim().length != 9) return 'Telefon raqam formati no\'to\'g\'ri';
         return null;
       },
