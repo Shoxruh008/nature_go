@@ -236,7 +236,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       }
     }
   }
-
   void _showSnack(String msg, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
