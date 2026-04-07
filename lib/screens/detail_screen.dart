@@ -1,5 +1,5 @@
-import 'dart:ui_web' as ui_web;
-import 'dart:html' as html;
+import '../services/video_service_stub.dart'
+if (dart.library.html) '../services/video_service_web.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
@@ -11,71 +11,11 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 import '../main.dart';
 import '../models/place_model.dart';
+import '../services/favourites_service.dart';
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
+import '../widgets/favourite_button.dart';
 import 'comments_sheet.dart';
-
-class VideoService {
-  VideoService._();
-
-  static final Map<String, String> _registeredViewIds = {};
-
-  static String? extractId(String url) {
-    final uri = Uri.tryParse(url.trim());
-    if (uri == null) return null;
-
-    if (uri.host.contains('youtu.be')) {
-      final seg = uri.pathSegments.firstOrNull;
-      return (seg != null && seg.length == 11) ? seg : null;
-    }
-
-    final v = uri.queryParameters['v'];
-    if (v != null && v.length == 11) return v;
-
-    final segments = uri.pathSegments;
-    if (segments.length >= 2) {
-      const knownPaths = {'shorts', 'embed', 'live', 'v'};
-      final parent = segments[segments.length - 2];
-      final last = segments.last;
-      if (knownPaths.contains(parent) && last.length == 11) return last;
-    }
-
-    return null;
-  }
-
-  static String getOrRegisterWebView(String videoId) {
-    if (_registeredViewIds.containsKey(videoId)) {
-      return _registeredViewIds[videoId]!;
-    }
-    final viewId = 'yt-iframe-$videoId';
-    ui_web.platformViewRegistry.registerViewFactory(viewId, (_) {
-      return html.IFrameElement()
-        ..src = _embedUrl(videoId)
-        ..style.border = 'none'
-        ..style.width = '100%'
-        ..style.height = '100%'
-        ..allowFullscreen = true
-        ..setAttribute(
-          'allow',
-          'accelerometer; autoplay; clipboard-write; '
-              'encrypted-media; gyroscope; picture-in-picture',
-        );
-    });
-    _registeredViewIds[videoId] = viewId;
-    return viewId;
-  }
-
-  static WebViewController buildMobileController(String videoId) {
-    return WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
-      ..loadRequest(Uri.parse(_embedUrl(videoId)));
-  }
-
-  static String _embedUrl(String videoId) =>
-      'https://www.youtube.com/embed/$videoId'
-          '?autoplay=1&playsinline=1&rel=0&modestbranding=1';
-}
 
 class DetailScreen extends StatefulWidget {
   final String placeId;
@@ -116,8 +56,9 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   void dispose() {
     _imgCtrl.dispose();
-    _mapController?.dispose();
-    _webViewController?.loadRequest(Uri.parse('about:blank'));
+    // YandexMapController ni biz dispose qilmaymiz —
+    // YandexMap widget o'zi dispose qiladi, ikki marta qilsa crash bo'ladi
+    try { _webViewController?.loadRequest(Uri.parse('about:blank')); } catch (_) {}
     super.dispose();
   }
 
@@ -228,7 +169,7 @@ class _DetailScreenState extends State<DetailScreen> {
     ));
   }
 
-  void _openComments() => openCommentsSheet(context, widget.placeId);
+  void _openComments() => openCommentsSheet(context, widget.placeId, _place?.baseRating ?? 0.0);
 
   @override
   Widget build(BuildContext context) {
@@ -649,11 +590,16 @@ class _HeroImageSection extends StatelessWidget {
                 onTap: onBack,
                 child: _glassBtn(child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 16)),
               ),
-              if (onVideoTap != null)
-                GestureDetector(
-                  onTap: onVideoTap,
-                  child: _glassPill(icon: Icons.play_arrow, label: 'Video ko\'rish'),
-                ),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                FavouriteButton(placeId: p.id, size: 40, dark: true),
+                if (onVideoTap != null) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: onVideoTap,
+                    child: _glassPill(icon: Icons.play_arrow, label: 'Video ko\'rish'),
+                  ),
+                ],
+              ]),
             ]),
           ),
         ),

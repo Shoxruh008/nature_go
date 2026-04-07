@@ -46,15 +46,17 @@ class DefaultFirebaseOptions {
     messagingSenderId: '225052370906',
     projectId: 'nature-go-c188e',
     authDomain: 'nature-go-c188e.firebaseapp.com',
+    databaseURL: 'https://nature-go-c188e-default-rtdb.firebaseio.com',
     storageBucket: 'nature-go-c188e.firebasestorage.app',
     measurementId: 'G-MCT40MLNQK',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCyjN7sk4mfDlgLC6DvNT3V2WGp8mGN_aU',
-    appId: '1:225052370906:android:368109089186ffa7fa42e3',
+    appId: '1:225052370906:android:0371f1994f44acb4fa42e3',
     messagingSenderId: '225052370906',
     projectId: 'nature-go-c188e',
+    databaseURL: 'https://nature-go-c188e-default-rtdb.firebaseio.com',
     storageBucket: 'nature-go-c188e.firebasestorage.app',
   );
 

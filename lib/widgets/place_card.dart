@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import '../main.dart';
 import '../models/place_model.dart';
 import '../services/location_service.dart';
+import 'favourite_button.dart';
 import 'star_rating.dart';
 
 class PlaceCard extends StatelessWidget {
@@ -50,32 +51,32 @@ class PlaceCard extends StatelessWidget {
                     if (place.images.isNotEmpty)
                       kIsWeb
                           ? Image.network(
-                              place.images.first,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (_, child, progress) =>
-                                  progress == null
-                                      ? child
-                                      : Container(color: pt.bg),
-                              errorBuilder: (_, __, ___) => Container(
-                                color: pt.bg,
-                                child: Center(
-                                  child: Text(pt.icon,
-                                      style: const TextStyle(fontSize: 40)),
-                                ),
-                              ),
-                            )
+                        place.images.first,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (_, child, progress) =>
+                        progress == null
+                            ? child
+                            : Container(color: pt.bg),
+                        errorBuilder: (_, __, ___) => Container(
+                          color: pt.bg,
+                          child: Center(
+                            child: Text(pt.icon,
+                                style: const TextStyle(fontSize: 40)),
+                          ),
+                        ),
+                      )
                           : CachedNetworkImage(
-                              imageUrl: place.images.first,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: pt.bg),
-                              errorWidget: (_, __, ___) => Container(
-                                color: pt.bg,
-                                child: Center(
-                                  child: Text(pt.icon,
-                                      style: const TextStyle(fontSize: 40)),
-                                ),
-                              ),
-                            )
+                        imageUrl: place.images.first,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: pt.bg),
+                        errorWidget: (_, __, ___) => Container(
+                          color: pt.bg,
+                          child: Center(
+                            child: Text(pt.icon,
+                                style: const TextStyle(fontSize: 40)),
+                          ),
+                        ),
+                      )
                     else
                       Container(
                         color: pt.bg,
@@ -124,26 +125,38 @@ class PlaceCard extends StatelessWidget {
                         }).toList(),
                       ),
                     ),
-                    if (place.distanceTo != null)
-                      Positioned(
-                        top: 8, right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(8),
+                    Positioned(
+                      top: 8, right: 8,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          FavouriteButton(
+                            placeId: place.id,
+                            size: 32,
+                            dark: true,
                           ),
-                          child: Text(
-                            LocationService.instance
-                                .formatDistance(place.distanceTo!),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ),
+                          if (place.distanceTo != null) ...[
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                LocationService.instance
+                                    .formatDistance(place.distanceTo!),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
+                    ),
                     Positioned(
                       bottom: 8, right: 8,
                       child: Container(

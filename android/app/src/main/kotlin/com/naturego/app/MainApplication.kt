@@ -1,4 +1,5 @@
-package com.example.nature_go
+package com.naturego.app
+
 import android.app.Application
 import com.yandex.mapkit.MapKitFactory
 

@@ -8,18 +8,19 @@ import '../main.dart'; // AppTheme
 import '../models/review_model.dart';
 import '../services/review_service.dart';
 
-void openCommentsSheet(BuildContext context, String placeId) {
+void openCommentsSheet(BuildContext context, String placeId, double baseRating) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => CommentsSheet(placeId: placeId),
+    builder: (_) => CommentsSheet(placeId: placeId, baseRating: baseRating),
   );
 }
 
 class CommentsSheet extends StatefulWidget {
   final String placeId;
-  const CommentsSheet({super.key, required this.placeId});
+  final double baseRating;
+  const CommentsSheet({super.key, required this.placeId, required this.baseRating});
 
   @override
   State<CommentsSheet> createState() => _CommentsSheetState();
@@ -64,6 +65,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
             Expanded(
               child: _ReviewList(
                 placeId: widget.placeId,
+                baseRating: widget.baseRating,
                 scrollController: scrollCtrl,
               ),
             ),
@@ -226,6 +228,8 @@ class _ReviewFormState extends State<_ReviewForm> {
 
   void _setError(String? msg) => setState(() => _error = msg);
 
+  bool _uploadingImages = false;
+
   Future<void> _submit() async {
     _setError(null);
     final text = _textCtrl.text.trim();
@@ -239,7 +243,7 @@ class _ReviewFormState extends State<_ReviewForm> {
       return;
     }
 
-    setState(() => _submitting = true);
+    setState(() { _submitting = true; _uploadingImages = _selectedImages.isNotEmpty; });
 
     try {
       await ReviewService.submitReview(
@@ -250,11 +254,16 @@ class _ReviewFormState extends State<_ReviewForm> {
       );
 
       if (mounted) {
+        setState(() { _submitting = false; _uploadingImages = false; });
         _showSuccessDialog(onDone: widget.onSubmitted);
       }
-    } catch (e) {
-      _setError('Xatolik yuz berdi. Qayta urinib ko\'ring.');
-      if (mounted) setState(() => _submitting = false);
+    } on Exception catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _setError(msg);
+      if (mounted) setState(() { _submitting = false; _uploadingImages = false; });
+    } catch (_) {
+      _setError('Internet bilan muammo. Qayta urinib ko\'ring.');
+      if (mounted) setState(() { _submitting = false; _uploadingImages = false; });
     }
   }
 
@@ -425,15 +434,19 @@ class _ReviewFormState extends State<_ReviewForm> {
                   ],
                 ),
                 child: _submitting
-                    ? const Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
+                    ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                     ),
-                  ),
+                    if (_uploadingImages) ...[
+                      const SizedBox(height: 4),
+                      const Text('Rasmlar yuklanmoqda...',
+                          style: TextStyle(color: Colors.white70, fontSize: 10)),
+                    ],
+                  ],
                 )
                     : const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -614,10 +627,12 @@ class _ImagePickerRow extends StatelessWidget {
 
 class _ReviewList extends StatelessWidget {
   final String placeId;
+  final double baseRating;
   final ScrollController scrollController;
 
   const _ReviewList({
     required this.placeId,
+    required this.baseRating,
     required this.scrollController,
   });
 
@@ -639,14 +654,11 @@ class _ReviewList extends StatelessWidget {
 
         if (reviews.isEmpty) return const _EmptyReviews();
 
-        final avg =
-            reviews.fold(0.0, (sum, r) => sum + r.rating) / reviews.length;
-
         return ListView(
           controller: scrollController,
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
-            _RatingSummary(avg: avg, count: reviews.length),
+            _RatingSummary(avg: baseRating, count: reviews.length),
             const SizedBox(height: 12),
             ...reviews.map((r) => _ReviewCard(review: r)),
           ],

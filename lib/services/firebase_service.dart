@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/place_model.dart';
+import 'auth_service.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._();
@@ -15,7 +16,6 @@ class FirebaseService {
   final _storage = FirebaseStorage.instance;
 
   final Map<String, PlaceModel> _placeCache = {};
-
   List<PlaceModel>? _placesCache;
 
   Stream<List<PlaceModel>> publishedPlaces() {
@@ -35,7 +35,6 @@ class FirebaseService {
 
   Future<PlaceModel?> getPlace(String id) async {
     if (_placeCache.containsKey(id)) return _placeCache[id];
-
     final doc = await _db.collection('places').doc(id).get();
     if (!doc.exists) return null;
     final place = PlaceModel.fromFirestore(doc);
@@ -152,8 +151,15 @@ class FirebaseService {
     }
   }
 
+  /// Joy qo'shish — faqat autentifikatsiya qilingan foydalanuvchi
   Future<String> addPlace(PlaceModel place) async {
-    final ref = await _db.collection('places').add(place.toFirestore());
+    final uid = await AuthService.instance.getUid();
+    if (uid == null) {
+      throw Exception('Autentifikatsiya xatosi. Qayta urinib ko\'ring.');
+    }
+    final data = place.toFirestore();
+    data['submittedBy'] = uid;
+    final ref = await _db.collection('places').add(data);
     return ref.id;
   }
 }

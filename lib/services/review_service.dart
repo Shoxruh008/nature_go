@@ -4,21 +4,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 import '../models/review_model.dart';
-
-class GuestSession {
-  static const _kGuestId = 'guest_id';
-
-  static Future<String> getOrCreateId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getString(_kGuestId);
-    if (existing != null && existing.isNotEmpty) return existing;
-    final newId = const Uuid().v4();
-    await prefs.setString(_kGuestId, newId);
-    return newId;
-  }
-}
+import 'auth_service.dart';
 
 class ReviewService {
   static final _firestore = FirebaseFirestore.instance;
@@ -29,9 +16,13 @@ class ReviewService {
         .collection('reviews')
         .where('placeId', isEqualTo: placeId)
         .where('isPublished', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map(ReviewModel.fromDoc).toList());
+        .map((snap) {
+      final list = snap.docs.map(ReviewModel.fromDoc).toList();
+      // Client-side sort — Firestore composite index talab qilmaydi
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    });
   }
 
   static Future<List<String>> uploadImages(
@@ -52,13 +43,40 @@ class ReviewService {
     return urls;
   }
 
+  /// Spam tekshiruvi — local cache orqali (Firestore query talab qilmaydi)
+  static Future<bool> _hasRecentReview(String placeId, String uid) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'last_review_${placeId}_$uid';
+    final lastMs = prefs.getInt(key);
+    if (lastMs == null) return false;
+    final last = DateTime.fromMillisecondsSinceEpoch(lastMs);
+    return DateTime.now().difference(last) < const Duration(hours: 24);
+  }
+
+  static Future<void> _saveReviewTimestamp(String placeId, String uid) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'last_review_${placeId}_$uid';
+    await prefs.setInt(key, DateTime.now().millisecondsSinceEpoch);
+  }
+
   static Future<void> submitReview({
     required String placeId,
     required double rating,
     required String text,
     required List<XFile> images,
   }) async {
-    final guestId = await GuestSession.getOrCreateId();
+    // Anonim auth — UID olish kafolatlangan
+    final uid = await AuthService.instance.getUid();
+    if (uid == null) {
+      throw Exception('Autentifikatsiya xatosi. Qayta urinib ko\'ring.');
+    }
+
+    // Spam himoyasi: 24 soatda bir joyga 1 ta sharh
+    final hasRecent = await _hasRecentReview(placeId, uid);
+    if (hasRecent) {
+      throw Exception('Siz bu joyga so\'nggi 24 soat ichida sharh yozgansiz.');
+    }
+
     final docRef = _firestore.collection('reviews').doc();
 
     final imageUrls =
@@ -67,7 +85,7 @@ class ReviewService {
     final review = ReviewModel(
       id: docRef.id,
       placeId: placeId,
-      authorId: guestId,
+      authorId: uid,
       authorName: 'Mehmon',
       authorAvatar: null,
       rating: rating,
@@ -78,5 +96,7 @@ class ReviewService {
     );
 
     await docRef.set(review.toMap());
+    // Muvaffaqiyatli yuborilgandan keyin timestamp saqlash
+    await _saveReviewTimestamp(placeId, uid);
   }
 }

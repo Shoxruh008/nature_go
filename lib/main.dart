@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:nature_go/screens/home_screen.dart';
 import 'firebase_options.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Anonim autentifikatsiya — foydalanuvchi hech narsa ko'rmaydi
+  await AuthService.instance.signInAnonymously();
 
   runApp(const MyApp());
 }

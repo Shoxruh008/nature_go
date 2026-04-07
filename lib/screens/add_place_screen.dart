@@ -715,7 +715,14 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         ),
         validator: (v) {
           if (v == null || v.trim().isEmpty) return 'Kiriting';
-          if (double.tryParse(v.trim()) == null) return 'Noto\'g\'ri';
+          final val = double.tryParse(v.trim());
+          if (val == null) return 'Noto\'g\'ri';
+          // lat: -90..90, lng: -180..180
+          if (label.contains('lat') || label.contains('Kenglik')) {
+            if (val < -90 || val > 90) return '-90 dan 90 gacha';
+          } else {
+            if (val < -180 || val > 180) return '-180 dan 180 gacha';
+          }
           return null;
         },
       ),

@@ -8,8 +8,10 @@ import '../main.dart';
 import '../models/place_model.dart';
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
+import '../widgets/favourite_button.dart';
 import 'add_place_screen.dart';
 import 'detail_screen.dart';
+import 'favourites_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +20,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  int _currentIndex = 0; // 0 = Bosh sahifa, 1 = Joy qo'shish, 2 = Sevimlilar
+
   List<PlaceModel> _allPlaces = [];
   List<PlaceModel> _filtered = [];
   bool _loading = true;
@@ -50,8 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _listenPlaces();
   }
 
-  void _onScroll() {
-  }
+  void _onScroll() {}
 
   bool _locationLoading = false;
 
@@ -85,17 +88,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
+  bool _networkError = false;
+
   void _listenPlaces() {
     _placesSub = FirebaseService.instance.publishedPlaces().listen((places) {
       if (mounted) {
         setState(() {
           _allPlaces = places;
           _loading = false;
+          _networkError = false;
           _applyFiltersInner();
         });
       }
     }, onError: (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; _networkError = true; });
     });
   }
 
@@ -150,6 +156,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  void _onNavTap(int index) {
+    if (index == 1) {
+      // Joy qo'shish — promo sheet ko'rsatish, index o'zgarmaydi
+      _showAddPromoSheet();
+      return;
+    }
+    setState(() => _currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -159,35 +174,144 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F7F5),
-        body: Stack(
+        body: IndexedStack(
+          index: _currentIndex == 2 ? 1 : 0,
           children: [
-            _buildBg(),
-            SafeArea(
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  _buildSearch(),
-                  _buildSeasonChips(),
-                  _buildTypeChips(),
-                  _buildDistanceSlider(),
-                  const SizedBox(height: 6),
-                  Expanded(child: _buildBody()),
-                ],
+            // 0: Bosh sahifa
+            Stack(
+              children: [
+                _buildBg(),
+                SafeArea(
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      _buildSearch(),
+                      _buildSeasonChips(),
+                      _buildTypeChips(),
+                      _buildDistanceSlider(),
+                      const SizedBox(height: 6),
+                      Expanded(child: _buildBody()),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // 2: Sevimlilar (index 1 — joy qo'shish sheet, bu yerda placeholder)
+            const FavouritesScreen(),
+          ],
+        ),
+        bottomNavigationBar: _buildBottomNavBar(),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              _buildNavItem(
+                index: 0,
+                icon: Icons.home_rounded,
+                label: 'Bosh sahifa',
+              ),
+              _buildNavAddButton(),
+              _buildNavItem(
+                index: 2,
+                icon: Icons.favorite_rounded,
+                label: 'Sevimlilar',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required String label,
+    Color? activeColor,
+  }) {
+    final isActive = _currentIndex == index;
+    final color = activeColor ?? AppTheme.primary;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onNavTap(index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: isActive ? color.withOpacity(0.12) : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                icon,
+                size: 24,
+                color: isActive ? color : const Color(0xFFB0BDB0),
               ),
             ),
-            Positioned(
-              bottom: 24,
-              right: 20,
-              child: FloatingActionButton(
-                onPressed: _showAddPromoSheet,
-                backgroundColor: AppTheme.primary,
-                elevation: 6,
-                shape: const CircleBorder(),
-                child: const Icon(
-                  Icons.add_location_alt_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? color : const Color(0xFFB0BDB0),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavAddButton() {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onNavTap(1),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.add_location_alt_rounded,
+                size: 24,
+                color: Color(0xFFB0BDB0),
+              ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              "Joy qo'shish",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFB0BDB0),
               ),
             ),
           ],
@@ -440,7 +564,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             color: AppTheme.textMain),
         decoration: InputDecoration(
           hintText: 'Joy, hudud yoki teg qidiring...',
-          hintStyle: TextStyle(color: AppTheme.textSecondary.withOpacity(0.65), fontSize: 13, ),
+          hintStyle: TextStyle(
+              color: AppTheme.textSecondary.withOpacity(0.65), fontSize: 13),
           prefixIcon: Padding(
             padding: const EdgeInsets.all(10),
             child: Icon(Icons.search_rounded,
@@ -723,11 +848,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
         if (_loading)
           SliverFillRemaining(child: _buildLoader())
+        else if (_networkError)
+          SliverFillRemaining(child: _buildNetworkError())
         else if (_filtered.isEmpty)
           SliverFillRemaining(child: _buildEmpty())
         else
           _buildNearby(),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 110)),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
       ],
     );
   }
@@ -781,27 +908,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     p.images.isNotEmpty
                         ? (kIsWeb
-                            ? Image.network(
-                                p.images.first,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (_, child, progress) =>
-                                    progress == null
-                                        ? child
-                                        : Container(color: pt.bg),
-                                errorBuilder: (_, __, ___) => Container(
-                                    color: pt.bg,
-                                    child: Center(
-                                        child: Text(pt.icon,
-                                            style: const TextStyle(fontSize: 40)))))
-                            : CachedNetworkImage(
-                                imageUrl: p.images.first,
-                                fit: BoxFit.cover,
-                                placeholder: (_, __) => Container(color: pt.bg),
-                                errorWidget: (_, __, ___) => Container(
-                                    color: pt.bg,
-                                    child: Center(
-                                        child: Text(pt.icon,
-                                            style: const TextStyle(fontSize: 40))))))
+                        ? Image.network(
+                        p.images.first,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (_, child, progress) =>
+                        progress == null
+                            ? child
+                            : Container(color: pt.bg),
+                        errorBuilder: (_, __, ___) => Container(
+                            color: pt.bg,
+                            child: Center(
+                                child: Text(pt.icon,
+                                    style: const TextStyle(fontSize: 40)))))
+                        : CachedNetworkImage(
+                        imageUrl: p.images.first,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: pt.bg),
+                        errorWidget: (_, __, ___) => Container(
+                            color: pt.bg,
+                            child: Center(
+                                child: Text(pt.icon,
+                                    style: const TextStyle(fontSize: 40))))))
                         : Container(
                         color: pt.bg,
                         child: Center(
@@ -820,6 +947,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             stops: const [0.38, 1.0],
                           ),
                         ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: FavouriteButton(
+                        placeId: p.id,
+                        size: 32,
+                        dark: true,
                       ),
                     ),
                     Positioned(
@@ -895,7 +1031,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: GestureDetector(
                 onTap: () => _openDetail(p),
                 child: Container(
-                  height: 88,
+                  height: 104,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
@@ -912,34 +1048,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         borderRadius: const BorderRadius.horizontal(
                             left: Radius.circular(18)),
                         child: SizedBox(
-                          width: 88,
-                          height: 88,
+                          width: 104,
+                          height: 104,
                           child: p.images.isNotEmpty
                               ? (kIsWeb
-                                  ? Image.network(
-                                      p.images.first,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder: (_, child, progress) =>
-                                          progress == null
-                                              ? child
-                                              : Container(color: pt.bg),
-                                      errorBuilder: (_, __, ___) => Container(
-                                          color: pt.bg,
-                                          child: Center(
-                                              child: Text(pt.icon,
-                                                  style: const TextStyle(
-                                                      fontSize: 26)))))
-                                  : CachedNetworkImage(
-                                      imageUrl: p.images.first,
-                                      fit: BoxFit.cover,
-                                      placeholder: (_, __) =>
-                                          Container(color: pt.bg),
-                                      errorWidget: (_, __, ___) => Container(
-                                          color: pt.bg,
-                                          child: Center(
-                                              child: Text(pt.icon,
-                                                  style: const TextStyle(
-                                                      fontSize: 26))))))
+                              ? Image.network(
+                              p.images.first,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (_, child, progress) =>
+                              progress == null
+                                  ? child
+                                  : Container(color: pt.bg),
+                              errorBuilder: (_, __, ___) => Container(
+                                  color: pt.bg,
+                                  child: Center(
+                                      child: Text(pt.icon,
+                                          style: const TextStyle(
+                                              fontSize: 26)))))
+                              : CachedNetworkImage(
+                              imageUrl: p.images.first,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) =>
+                                  Container(color: pt.bg),
+                              errorWidget: (_, __, ___) => Container(
+                                  color: pt.bg,
+                                  child: Center(
+                                      child: Text(pt.icon,
+                                          style: const TextStyle(
+                                              fontSize: 26))))))
                               : Container(
                               color: pt.bg,
                               child: Center(
@@ -1025,15 +1161,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       Padding(
                         padding: const EdgeInsets.only(right: 10),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Icon(Icons.arrow_forward_ios_rounded,
-                              size: 13, color: AppTheme.primary),
+                        child: FavouriteButton(
+                          placeId: p.id,
+                          size: 30,
+                          dark: false,
                         ),
                       ),
                     ],
@@ -1076,6 +1207,58 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: AppTheme.textSecondary,
                 fontWeight: FontWeight.w500)),
       ],
+    ),
+  );
+
+  Widget _buildNetworkError() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEBEE),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+                child: Text('📡', style: TextStyle(fontSize: 34))),
+          ),
+          const SizedBox(height: 14),
+          const Text('Internet bilan muammo',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textMain)),
+          const SizedBox(height: 5),
+          const Text(
+            'Internetni tekshirib, qayta urinib ko\'ring',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () {
+              setState(() { _loading = true; _networkError = false; });
+              _listenPlaces();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: const Text('Qayta urinish',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13)),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 
@@ -1213,33 +1396,6 @@ class _AddPromoSheet extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _bonusCard(String emoji, String label, Color bg, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 26)),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                  height: 1.35),
-            ),
-          ],
-        ),
       ),
     );
   }

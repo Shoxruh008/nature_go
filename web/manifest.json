@@ -1,12 +1,12 @@
 {
-    "name": "nature_go",
-    "short_name": "nature_go",
-    "start_url": ".",
+    "name": "NatureGo",
+    "short_name": "NatureGo",
+    "start_url": "./",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#ffffff",
+    "theme_color": "#2f7d32",
+    "description": "Tabiat joylari va sayohat yo'nalishlarini o'rganing",
+    "orientation": "portrait",
     "prefer_related_applications": false,
     "icons": [
         {

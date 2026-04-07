@@ -10,7 +10,7 @@
 
     <application
         android:name=".MainApplication"
-        android:label="nature_go"
+        android:label="NatureGo"
         android:icon="@mipmap/ic_launcher">
 
         <!-- ─── Yandex MapKit API Key ──────────────────── -->
