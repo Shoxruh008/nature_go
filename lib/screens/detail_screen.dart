@@ -409,7 +409,7 @@ class _DetailScreenState extends State<DetailScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.route_rounded, size: 16, color: AppTheme.primary),
+                const Icon(Icons.height, size: 16, color: AppTheme.primary),
                 const SizedBox(width: 6),
                 Text(
                   'Balandligi: ${p.trekAltitude}',
