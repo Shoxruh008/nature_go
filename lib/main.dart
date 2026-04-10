@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:nature_go/screens/home_screen.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,8 +20,11 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Anonim autentifikatsiya — foydalanuvchi hech narsa ko'rmaydi
   await AuthService.instance.signInAnonymously();
+
+  await FirebaseMessaging.instance.requestPermission();
+
+  await FirebaseMessaging.instance.subscribeToTopic('places');
 
   runApp(const MyApp());
 }
