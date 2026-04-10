@@ -1,4 +1,3 @@
-// lib/services/video_service_stub.dart
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/material.dart';
 
@@ -28,7 +27,6 @@ class VideoService {
     return null;
   }
 
-  /// Web-only — stab sifatida null qaytaradi
   static String? getOrRegisterWebView(String videoId) => null;
 
   static WebViewController buildMobileController(String videoId) {

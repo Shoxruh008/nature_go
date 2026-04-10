@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/place_model.dart';
 import 'auth_service.dart';
+import 'image_compress_service.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._();
@@ -104,7 +105,8 @@ class FirebaseService {
   }) async {
     final urls = <String>[];
     for (int i = 0; i < files.length; i++) {
-      final bytes = await files[i].readAsBytes();
+      final originalBytes = await files[i].readAsBytes();
+      final bytes = await compressImage(originalBytes);
       final fileName =
           'places/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
       final ref = _storage.ref().child(fileName);
@@ -151,7 +153,6 @@ class FirebaseService {
     }
   }
 
-  /// Joy qo'shish — faqat autentifikatsiya qilingan foydalanuvchi
   Future<String> addPlace(PlaceModel place) async {
     final uid = await AuthService.instance.getUid();
     if (uid == null) {

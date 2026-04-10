@@ -223,6 +223,11 @@ class _DetailScreenState extends State<DetailScreen> {
                   const SizedBox(height: 18),
                   _buildDescription(p),
                 ],
+                if ((p.type == 'toglar' || p.type == 'choqqilar') &&
+                    (p.trekDifficulty != null || p.trekLength != null)) ...[
+                  const SizedBox(height: 14),
+                  _buildTrekInfo(p),
+                ],
                 if (p.routeFileUrl != null) ...[
                   const SizedBox(height: 14),
                   _buildRouteFileCard(p),
@@ -354,6 +359,71 @@ class _DetailScreenState extends State<DetailScreen> {
         Text(p.description,
             style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.7)),
       ]),
+    );
+  }
+
+  Widget _buildTrekInfo(PlaceModel p) {
+    return _SectionCard(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader('🥾', 'Trek ma\'lumotlari'),
+          const SizedBox(height: 12),
+
+          if (p.trekDifficulty != null)
+            Row(
+              children: [
+                const Icon(Icons.speed_rounded, size: 16, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Qiyinlik: ${p.trekDifficulty}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ],
+            ),
+
+          if (p.trekLength != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.route_rounded, size: 16, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Uzunligi: ${p.trekLength}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          if (p.trekAltitude != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.route_rounded, size: 16, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Balandligi: ${p.trekAltitude}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

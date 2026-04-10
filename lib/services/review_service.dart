@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/review_model.dart';
 import 'auth_service.dart';
+import 'image_compress_service.dart';
 
 class ReviewService {
   static final _firestore = FirebaseFirestore.instance;
@@ -19,7 +20,6 @@ class ReviewService {
         .snapshots()
         .map((snap) {
       final list = snap.docs.map(ReviewModel.fromDoc).toList();
-      // Client-side sort — Firestore composite index talab qilmaydi
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
@@ -33,17 +33,26 @@ class ReviewService {
     for (int i = 0; i < images.length; i++) {
       final ref = _storage.ref('reviews/$reviewId/img_$i.jpg');
       if (kIsWeb) {
-        final bytes = await images[i].readAsBytes();
-        await ref.putData(bytes);
+        final originalBytes = await images[i].readAsBytes();
+        final bytes = await compressImage(originalBytes);
+
+        await ref.putData(
+          bytes,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
       } else {
-        await ref.putFile(File(images[i].path));
-      }
+        final originalBytes = await images[i].readAsBytes();
+        final bytes = await compressImage(originalBytes);
+
+        await ref.putData(
+          bytes,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );      }
       urls.add(await ref.getDownloadURL());
     }
     return urls;
   }
 
-  /// Spam tekshiruvi — local cache orqali (Firestore query talab qilmaydi)
   static Future<bool> _hasRecentReview(String placeId, String uid) async {
     final prefs = await SharedPreferences.getInstance();
     final key = 'last_review_${placeId}_$uid';
@@ -65,13 +74,11 @@ class ReviewService {
     required String text,
     required List<XFile> images,
   }) async {
-    // Anonim auth — UID olish kafolatlangan
     final uid = await AuthService.instance.getUid();
     if (uid == null) {
       throw Exception('Autentifikatsiya xatosi. Qayta urinib ko\'ring.');
     }
 
-    // Spam himoyasi: 24 soatda bir joyga 1 ta sharh
     final hasRecent = await _hasRecentReview(placeId, uid);
     if (hasRecent) {
       throw Exception('Siz bu joyga so\'nggi 24 soat ichida sharh yozgansiz.');
@@ -96,7 +103,6 @@ class ReviewService {
     );
 
     await docRef.set(review.toMap());
-    // Muvaffaqiyatli yuborilgandan keyin timestamp saqlash
     await _saveReviewTimestamp(placeId, uid);
   }
 }

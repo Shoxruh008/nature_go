@@ -18,6 +18,9 @@ class PlaceModel {
   final String? routeFileUrl;
   final String? videoUrl;
   final String? phone;
+  final String? trekDifficulty;
+  final String? trekLength;
+  final String? trekAltitude;
 
   PlaceModel({
     required this.id,
@@ -36,6 +39,9 @@ class PlaceModel {
     this.routeFileUrl,
     this.videoUrl,
     this.phone,
+    this.trekDifficulty,
+    this.trekLength,
+    this.trekAltitude,
   });
 
   double? distanceTo;
@@ -59,6 +65,9 @@ class PlaceModel {
       routeFileUrl: d['routeFileUrl'] as String?,
       videoUrl: d['videoUrl'] as String?,
       phone: d['phone'] as String?,
+      trekDifficulty: d['trekDifficulty'] as String?,
+      trekLength: d['trekLength'] as String?,
+      trekAltitude: d['trekElevation'] as String?,
     );
   }
 
@@ -78,6 +87,9 @@ class PlaceModel {
     if (routeFileUrl != null) 'routeFileUrl': routeFileUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,
     if (phone != null) 'phone': phone,
+    if (trekDifficulty != null) 'trekDifficulty': trekDifficulty,
+    if (trekLength != null) 'trekLength': trekLength,
+    if (trekAltitude != null) 'trekElevation': trekAltitude,
   };
 
   PlaceType get placeType => placeTypeFromId(type);

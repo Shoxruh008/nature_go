@@ -20,7 +20,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  int _currentIndex = 0; // 0 = Bosh sahifa, 1 = Joy qo'shish, 2 = Sevimlilar
+  int _currentIndex = 0;
 
   List<PlaceModel> _allPlaces = [];
   List<PlaceModel> _filtered = [];
@@ -158,7 +158,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _onNavTap(int index) {
     if (index == 1) {
-      // Joy qo'shish — promo sheet ko'rsatish, index o'zgarmaydi
       _showAddPromoSheet();
       return;
     }
@@ -177,7 +176,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         body: IndexedStack(
           index: _currentIndex == 2 ? 1 : 0,
           children: [
-            // 0: Bosh sahifa
             Stack(
               children: [
                 _buildBg(),
@@ -188,7 +186,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       _buildSearch(),
                       _buildSeasonChips(),
                       _buildTypeChips(),
-                      _buildDistanceSlider(),
                       const SizedBox(height: 6),
                       Expanded(child: _buildBody()),
                     ],
@@ -196,7 +193,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            // 2: Sevimlilar (index 1 — joy qo'shish sheet, bu yerda placeholder)
             const FavouritesScreen(),
           ],
         ),
@@ -745,79 +741,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildDistanceSlider() {
-    final bool isInfinite = _maxDistanceKm >= 500;
-    final String label = isInfinite
-        ? '∞  Cheksiz'
-        : _maxDistanceKm < 1
-        ? '< 1 km'
-        : '≤ ${_maxDistanceKm.round()} km';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 7,
-                offset: const Offset(0, 2))
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.social_distance_rounded,
-                size: 13, color: AppTheme.primary),
-            const SizedBox(width: 4),
-            Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: AppTheme.primary,
-                  inactiveTrackColor: AppTheme.primary.withOpacity(0.15),
-                  thumbColor: AppTheme.primary,
-                  overlayColor: AppTheme.primary.withOpacity(0.12),
-                  trackHeight: 2.5,
-                  thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 7),
-                ),
-                child: Slider(
-                  value: _maxDistanceKm,
-                  min: 0,
-                  max: 500,
-                  divisions: 100,
-                  onChanged: _userPos == null
-                      ? null
-                      : (v) {
-                    HapticFeedback.selectionClick();
-                    setState(() => _maxDistanceKm = v);
-                    _applyFilters();
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 160),
-              child: Text(
-                label,
-                key: ValueKey(label),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color:
-                  isInfinite ? AppTheme.textSecondary : AppTheme.primary,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

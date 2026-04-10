@@ -317,8 +317,8 @@ class _ReviewFormState extends State<_ReviewForm> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(dialogCtx); // ← dialogCtx ishlatiladi!
-                    onDone();                 // ← keyin callback
+                    Navigator.pop(dialogCtx);
+                    onDone();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,

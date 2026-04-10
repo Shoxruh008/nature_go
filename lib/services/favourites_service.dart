@@ -29,7 +29,6 @@ class FavouritesService extends ChangeNotifier {
     return _favourites.contains(placeId);
   }
 
-  /// Listener ichida ishlatiladigan sync versiya — _ensureLoaded bo'lgan bo'lishi kerak
   bool isFavouriteSync(String placeId) {
     return _favourites.contains(placeId);
   }
@@ -43,7 +42,7 @@ class FavouritesService extends ChangeNotifier {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_key, _favourites.toList());
-    notifyListeners(); // FavouritesScreen avtomatik yangilanadi
+    notifyListeners();
     return _favourites.contains(placeId);
   }
 

@@ -10,7 +10,6 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
   String? get uid => _auth.currentUser?.uid;
 
-  /// Ilova ishga tushganda chaqiriladi — anonim foydalanuvchi yaratadi yoki mavjudini qaytaradi
   Future<User?> signInAnonymously() async {
     try {
       if (_auth.currentUser != null) return _auth.currentUser;
@@ -21,7 +20,6 @@ class AuthService {
     }
   }
 
-  /// UID ni kafolatlangan holda qaytaradi — yo'q bo'lsa anonim kiradi
   Future<String?> getUid() async {
     if (_auth.currentUser != null) return _auth.currentUser!.uid;
     final user = await signInAnonymously();

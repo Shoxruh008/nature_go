@@ -1,4 +1,3 @@
-// lib/services/video_service_web.dart
 import 'dart:ui_web' as ui_web;
 import 'dart:html' as html;
 
@@ -55,7 +54,6 @@ class VideoService {
     return viewId;
   }
 
-  /// Mobile-only — web-da ishlatilmaydi
   static WebViewController buildMobileController(String videoId) {
     throw UnsupportedError('buildMobileController web-da ishlamaydi');
   }
