@@ -23,15 +23,14 @@ void main() async {
 
   await AuthService.instance.signInAnonymously();
 
-  await FirebaseMessaging.instance.requestPermission();
-
-  await FirebaseMessaging.instance.subscribeToTopic('places');
-
-  if (kIsWeb) {
+  if (!kIsWeb) {
+    await FirebaseMessaging.instance.requestPermission();
+    await FirebaseMessaging.instance.subscribeToTopic('places');
+  } else {
+    await FirebaseMessaging.instance.requestPermission();
     await FirebaseMessaging.instance.getToken(
       vapidKey: "BN9z7MmmZoIqhc1QMWxvheySzSNHQOGWShoILf1TRbNaIoExMsSBasO4AjAj91RhgYzNQPrMxNX0PsoEdx-7IyY",
     );
-    await FirebaseMessaging.instance.subscribeToTopic('places');
   }
 
   runApp(const MyApp());
