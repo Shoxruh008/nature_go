@@ -29,7 +29,7 @@ void main() async {
   } else {
     await FirebaseMessaging.instance.requestPermission();
     await FirebaseMessaging.instance.getToken(
-      vapidKey: "BN9z7MmmZoIqhc1QMWxvheySzSNHQOGWShoILf1TRbNaIoExMsSBasO4AjAj91RhgYzNQPrMxNX0PsoEdx-7IyY",
+      vapidKey: "BN9z7MmmZoIqhc1QMWxvheySzSNHQOGWShoILf1TRbNaIoExMsSBasO4AjAj91RhgYzNQPrMxNX0PsoEdx-7lyY",
     );
   }
 
