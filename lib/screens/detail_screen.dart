@@ -412,7 +412,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 const Icon(Icons.height, size: 16, color: AppTheme.primary),
                 const SizedBox(width: 6),
                 Text(
-                  'Balandligi: ${p.trekAltitude}',
+                  'Ko\'tarilish balandligi': ${p.trekAltitude}',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
