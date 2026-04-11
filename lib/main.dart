@@ -23,7 +23,6 @@ void main() async {
   await AuthService.instance.signInAnonymously();
 
   await FirebaseMessaging.instance.requestPermission();
-
   await FirebaseMessaging.instance.subscribeToTopic('places');
 
   runApp(const MyApp());
