@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="nature_go">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>nature_go</title>
+  <link rel="manifest" href="manifest.json">
+  <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
+</head>
+<body>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('firebase-messaging-sw.js');
+  }
+</script>
+<script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
