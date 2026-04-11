@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -23,15 +22,9 @@ void main() async {
 
   await AuthService.instance.signInAnonymously();
 
-  if (!kIsWeb) {
-    await FirebaseMessaging.instance.requestPermission();
-    await FirebaseMessaging.instance.subscribeToTopic('places');
-  } else {
-    await FirebaseMessaging.instance.requestPermission();
-    await FirebaseMessaging.instance.getToken(
-      vapidKey: "BN9z7MmmZoIqhc1QMWxvheySzSNHQOGWShoILf1TRbNaIoExMsSBasO4AjAj91RhgYzNQPrMxNX0PsoEdx-7lyY",
-    );
-  }
+  await FirebaseMessaging.instance.requestPermission();
+
+  await FirebaseMessaging.instance.subscribeToTopic('places');
 
   runApp(const MyApp());
 }
