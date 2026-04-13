@@ -11,6 +11,7 @@ import '../services/location_service.dart';
 import '../widgets/favourite_button.dart';
 import 'add_place_screen.dart';
 import 'detail_screen.dart';
+import 'donate_page.dart';
 import 'favourites_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -400,6 +401,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 const Spacer(),
+                GestureDetector(
+                  onTap: (){
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => DonatePage()));
+                  },
+                  child: Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text("Donat qilish",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
