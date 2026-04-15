@@ -12,7 +12,6 @@ const List<String> kUzbekistanRegions = [
   'Sirdaryo viloyati',
   'Xorazm viloyati',
   'Qoraqalpog\'iston Respublikasi',
-
   'Abay viloyati',
   'Akmola viloyati',
   'Aktobe viloyati',
@@ -30,7 +29,6 @@ const List<String> kUzbekistanRegions = [
   'Shimoliy Qozog\'iston viloyati',
   'Turkiston viloyati',
   'Ulytau viloyati',
-
   'Botken viloyati',
   'Chuy viloyati',
   'Jalolobod viloyati',
@@ -38,11 +36,9 @@ const List<String> kUzbekistanRegions = [
   'Narin viloyati',
   'O\'sh viloyati',
   'Talas viloyati',
-
   'Sug\'d viloyati',
   'Xatlon viloyati',
   'GBAO',
-
   'Ahal viloyati',
   'Balkan viloyati',
   'Dashoguz viloyati',

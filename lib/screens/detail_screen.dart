@@ -11,11 +11,11 @@ import 'package:yandex_mapkit/yandex_mapkit.dart';
 
 import '../main.dart';
 import '../models/place_model.dart';
-import '../services/favourites_service.dart';
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
 import '../widgets/favourite_button.dart';
 import 'comments_sheet.dart';
+import '../widgets/webmap/web_map_web.dart';
 
 class DetailScreen extends StatefulWidget {
   final String placeId;
@@ -289,6 +289,14 @@ class _DetailScreenState extends State<DetailScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildMap(double lat, double lng) {
+    if (kIsWeb) {
+      return WebYandexMap(lat: lat, lng: lng);
+    } else {
+      return _YandexMapWidget(lat: lat, lng: lng, onControllerReady: (YandexMapController p1) { },);
+    }
   }
 
   Widget _buildSliverAppBar(PlaceModel p, PlaceType pt) {
@@ -698,12 +706,7 @@ class _DetailScreenState extends State<DetailScreen> {
               child: Stack(
                 children: [
                   _showMap
-                      ? _YandexMapWidget(
-                          key: _mapKey,
-                          lat: p.lat,
-                          lng: p.lng,
-                          onControllerReady: (ctrl) => _mapController = ctrl,
-                        )
+                      ? _buildMap(p.lat, p.lng)
                       : Container(
                           height: 220,
                           alignment: Alignment.center,
