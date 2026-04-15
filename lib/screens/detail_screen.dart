@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+
 import '../services/video_service_stub.dart'
     if (dart.library.html) '../services/video_service_web.dart';
 
@@ -806,6 +808,11 @@ class _YandexMapWidgetState extends State<_YandexMapWidget> {
   @override
   Widget build(BuildContext context) {
     return YandexMap(
+      gestureRecognizers: {
+        Factory<OneSequenceGestureRecognizer>(
+          () => EagerGestureRecognizer(),
+        ),
+      },
       onMapCreated: (ctrl) async {
         widget.onControllerReady(ctrl);
         await ctrl.moveCamera(
