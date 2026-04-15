@@ -19,9 +19,9 @@ class _DonatePageState extends State<DonatePage>
   late AnimationController _fadeAnim;
   late AnimationController _heartAnim;
 
-  static const String _cardNumber = '8600 1234 5678 9012';
-  static const String _cardHolder = 'Abdullayev Jasur';
-  static const String _bankName = 'Uzcard';
+  static const String _cardNumber = '9860 0201 1002 1761';
+  static const String _cardHolder = 'Asilbek Fayzullayev';
+  static const String _bankName = 'Humo';
 
   bool _cardCopied = false;
 
@@ -47,13 +47,6 @@ class _DonatePageState extends State<DonatePage>
     super.dispose();
   }
 
-  String _formatAmount(int amount) {
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)} mln';
-    }
-    return '${(amount / 1000).toStringAsFixed(0)} 000';
-  }
-
   void _copyCard() {
     Clipboard.setData(ClipboardData(text: _cardNumber.replaceAll(' ', '')));
     HapticFeedback.mediumImpact();
@@ -70,7 +63,7 @@ class _DonatePageState extends State<DonatePage>
         statusBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7F5),
+        backgroundColor: AppTheme.primary,
         body: FadeTransition(
           opacity: _fadeAnim,
           child: CustomScrollView(
@@ -96,11 +89,7 @@ class _DonatePageState extends State<DonatePage>
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.primary, AppTheme.primaryDark],
-        ),
+        color: AppTheme.primary,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(36),
           bottomRight: Radius.circular(36),
@@ -144,8 +133,8 @@ class _DonatePageState extends State<DonatePage>
               ScaleTransition(
                 scale: _heartAnim,
                 child: Container(
-                  width: 90,
-                  height: 90,
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.18),
                     shape: BoxShape.circle,
@@ -478,8 +467,6 @@ class _DonatePageState extends State<DonatePage>
       ),
       child: Column(
         children: [
-          const Text('🙏', style: TextStyle(fontSize: 36)),
-          const SizedBox(height: 10),
           const Text(
             'Katta rahmat!',
             style: TextStyle(
