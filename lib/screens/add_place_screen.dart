@@ -3,27 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import '../constants/regions.dart';
 import '../main.dart';
 import '../models/place_model.dart';
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
 import 'map_picker_page.dart';
-
-const List<String> kUzbekistanRegions = [
-  'Toshkent viloyati',
-  'Andijon viloyati',
-  'Farg\'ona viloyati',
-  'Namangan viloyati',
-  'Samarqand viloyati',
-  'Buxoro viloyati',
-  'Navoiy viloyati',
-  'Qashqadaryo viloyati',
-  'Surxondaryo viloyati',
-  'Jizzax viloyati',
-  'Sirdaryo viloyati',
-  'Xorazm viloyati',
-  'Qoraqalpog\'iston Respublikasi',
-];
 
 const List<String> _kRouteExtensions = ['gpx', 'kml', 'geojson', 'json'];
 
