@@ -63,7 +63,8 @@ class _DonatePageState extends State<DonatePage>
         statusBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: AppTheme.primary,
+        appBar: AppBar(backgroundColor: AppTheme.primary,),
+        backgroundColor: Color(0xFFF5F7F5),
         body: FadeTransition(
           opacity: _fadeAnim,
           child: CustomScrollView(

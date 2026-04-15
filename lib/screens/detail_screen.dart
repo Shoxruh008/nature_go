@@ -40,6 +40,7 @@ class _DetailScreenState extends State<DetailScreen> {
 
   bool _routeDownloading = false;
 
+  bool _showMap = false;
   bool _showVideo = false;
   bool _videoLoading = false;
   bool _videoTapped = false;
@@ -56,8 +57,6 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   void dispose() {
     _imgCtrl.dispose();
-    // YandexMapController ni biz dispose qilmaymiz —
-    // YandexMap widget o'zi dispose qiladi, ikki marta qilsa crash bo'ladi
     try { _webViewController?.loadRequest(Uri.parse('about:blank')); } catch (_) {}
     super.dispose();
   }
@@ -192,53 +191,61 @@ class _DetailScreenState extends State<DetailScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F5),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          if (_showVideo)
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (scroll) {
+          if(scroll.metrics.pixels > 400 && !_showMap){
+            setState(() => _showMap = true);
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            if (_showVideo)
+              SliverToBoxAdapter(
+                child: _InlineVideoSection(
+                  place: p,
+                  iframeViewId: _iframeViewId,
+                  webViewController: _webViewController,
+                  videoLoading: _videoLoading,
+                  onClose: () => _toggleVideo(p),
+                  onBack: () => Navigator.pop(context),
+                ),
+              )
+            else
+              _buildSliverAppBar(p, pt),
+        
             SliverToBoxAdapter(
-              child: _InlineVideoSection(
-                place: p,
-                iframeViewId: _iframeViewId,
-                webViewController: _webViewController,
-                videoLoading: _videoLoading,
-                onClose: () => _toggleVideo(p),
-                onBack: () => Navigator.pop(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  _buildTitleSection(p, pt),
+                  const SizedBox(height: 12),
+                  _buildChipsRow(p),
+                  const SizedBox(height: 16),
+                  _buildActionButtons(p),
+                  if (p.description.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    _buildDescription(p),
+                  ],
+                  if ((p.type == 'toglar' || p.type == 'choqqilar') &&
+                      (p.trekDifficulty != null || p.trekLength != null)) ...[
+                    const SizedBox(height: 14),
+                    _buildTrekInfo(p),
+                  ],
+                  if (p.routeFileUrl != null) ...[
+                    const SizedBox(height: 14),
+                    _buildRouteFileCard(p),
+                  ],
+                  const SizedBox(height: 14),
+                  _buildMapCard(p),
+                  const SizedBox(height: 40),
+                ],
               ),
-            )
-          else
-            _buildSliverAppBar(p, pt),
-
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-                _buildTitleSection(p, pt),
-                const SizedBox(height: 12),
-                _buildChipsRow(p),
-                const SizedBox(height: 16),
-                _buildActionButtons(p),
-                if (p.description.isNotEmpty) ...[
-                  const SizedBox(height: 18),
-                  _buildDescription(p),
-                ],
-                if ((p.type == 'toglar' || p.type == 'choqqilar') &&
-                    (p.trekDifficulty != null || p.trekLength != null)) ...[
-                  const SizedBox(height: 14),
-                  _buildTrekInfo(p),
-                ],
-                if (p.routeFileUrl != null) ...[
-                  const SizedBox(height: 14),
-                  _buildRouteFileCard(p),
-                ],
-                const SizedBox(height: 14),
-                _buildMapCard(p),
-                const SizedBox(height: 40),
-              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
