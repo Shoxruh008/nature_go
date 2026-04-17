@@ -29,6 +29,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   final _phoneCtrl = TextEditingController();
 
   String _selectedType = 'toglar';
+  String? _selectedCountry;
   String? _selectedRegion;
   List<String> _selectedSeasons = [];
   List<String> _selectedTags = [];
@@ -189,6 +190,29 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     }
   }
 
+  // ── Country / Region picker ──────────────────────────────────────────────
+
+  void _showLocationPicker() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _LocationPickerSheet(
+        initialCountry: _selectedCountry,
+        initialRegion: _selectedRegion,
+        onSelected: (country, region) {
+          setState(() {
+            _selectedCountry = country;
+            _selectedRegion = region;
+          });
+        },
+      ),
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedRegion == null) {
@@ -260,13 +284,12 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         trekLength: (_selectedType == 'toglar' || _selectedType == 'choqqilar')
             ? trekLength
             : null,
-
         trekDifficulty:
-            (_selectedType == 'toglar' || _selectedType == 'choqqilar')
+        (_selectedType == 'toglar' || _selectedType == 'choqqilar')
             ? _trekDifficulty
             : null,
         trekAltitude:
-            (_selectedType == 'toglar' || _selectedType == 'choqqilar')
+        (_selectedType == 'toglar' || _selectedType == 'choqqilar')
             ? trekAltitude
             : null,
       );
@@ -349,10 +372,11 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                         ),
                       ]),
                       const SizedBox(height: 12),
+                      // ── Mamlakat va Viloyat — bitta card ──
                       _card([
-                        _secTitle('Viloyat', '🗺️'),
+                        _secTitle('Joylashuv (mamlakat / viloyat)', '🗺️'),
                         const SizedBox(height: 12),
-                        _buildRegionDropdown(),
+                        _buildLocationSelector(),
                       ]),
                       const SizedBox(height: 12),
                       _card([
@@ -366,10 +390,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                         _card([
                           _secTitle('Trek ma\'lumotlari', '🥾'),
                           const SizedBox(height: 12),
-
                           _buildTrekDifficultyPicker(),
                           const SizedBox(height: 10),
-
+                          Text(
+                            'Uzunligi',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           _textField(
                             'Trek uzunligi',
                             _trekLengthCtrl,
@@ -377,9 +407,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                             required: false,
                           ),
                           const SizedBox(height: 10),
-
+                          Text(
+                            'Ko\'tarilish balandligi',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           _textField(
-                            'Trek balandligi',
+                            'Trek ko\'tarilish balandligi',
                             _trekElevationCtrl,
                             hint: 'Masalan: 100m',
                             required: false,
@@ -511,8 +548,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                               : _submit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primary,
-                            disabledBackgroundColor: AppTheme.primary
-                                .withOpacity(0.5),
+                            disabledBackgroundColor:
+                            AppTheme.primary.withOpacity(0.5),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),
                             ),
@@ -520,33 +557,33 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                           ),
                           child: _loading
                               ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2.5,
-                                  ),
-                                )
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
                               : const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_location_alt_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Joy qo\'shish',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ],
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_location_alt_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Joy qo\'shish',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.2,
                                 ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -560,25 +597,97 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     );
   }
 
+  // ── Location selector button ─────────────────────────────────────────────
+
+  Widget _buildLocationSelector() {
+    final hasSelection = _selectedCountry != null && _selectedRegion != null;
+
+    return GestureDetector(
+      onTap: _showLocationPicker,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: hasSelection
+              ? AppTheme.primary.withOpacity(0.06)
+              : const Color(0xFFF5F7F5),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: hasSelection
+                ? AppTheme.primary.withOpacity(0.35)
+                : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              hasSelection ? Icons.location_on_rounded : Icons.public_rounded,
+              color: hasSelection ? AppTheme.primary : AppTheme.textSecondary,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: hasSelection
+                  ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _selectedCountry!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _selectedRegion!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textMain,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              )
+                  : const Text(
+                'Davlat va viloyatni tanlang...',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: hasSelection ? AppTheme.primary : AppTheme.textSecondary,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Trek difficulty ──────────────────────────────────────────────────────
+
   Widget _buildTrekDifficultyPicker() {
     final levels = ['Boshlang\'ich', 'O\'rta', 'Qiyin', 'O\'ta qiyin'];
-
     return Wrap(
       spacing: 8,
       children: levels.map((level) {
         final selected = _trekDifficulty == level;
-
         return GestureDetector(
-          onTap: () {
-            setState(() => _trekDifficulty = level);
-          },
+          onTap: () => setState(() => _trekDifficulty = level),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: selected ? AppTheme.primary : const Color(0xFFF5F7F5),
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
-                color: selected ? AppTheme.primary : const Color(0xFFE0E0E0),
+                color:
+                selected ? AppTheme.primary : const Color(0xFFE0E0E0),
               ),
             ),
             child: Text(
@@ -595,6 +704,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     );
   }
 
+  // ── Phone field ──────────────────────────────────────────────────────────
+
   Widget _buildPhoneField() {
     return TextFormField(
       controller: _phoneCtrl,
@@ -605,7 +716,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       decoration: InputDecoration(
         counterText: '',
         hintText: '__ ___ ____',
-        hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        hintStyle:
+        const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
         filled: true,
         fillColor: const Color(0xFFF5F7F5),
         border: OutlineInputBorder(
@@ -633,9 +745,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.primary.withOpacity(0.08),
-            borderRadius: const BorderRadius.horizontal(
-              left: Radius.circular(25),
-            ),
+            borderRadius:
+            const BorderRadius.horizontal(left: Radius.circular(25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -656,12 +767,14 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         ),
       ),
       validator: (v) {
-        if (v == null || v.trim().isEmpty) return null; // bo'sh bo'lsa OK
-        if (v.trim().length != 9) return 'Telefon raqam formati no\'to\'g\'ri';
+        if (v == null || v.trim().isEmpty) return null;
+        if (v.trim().length != 9) return 'Telefon raqam formati noto\'g\'ri';
         return null;
       },
     );
   }
+
+  // ── AppBar ───────────────────────────────────────────────────────────────
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
@@ -690,7 +803,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           ),
         ),
       ),
-      title: Text(
+      title: const Text(
         "Yangi joy qo'shish",
         style: TextStyle(
           fontSize: 17,
@@ -701,6 +814,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       centerTitle: true,
     );
   }
+
+  // ── Upload bar ───────────────────────────────────────────────────────────
 
   Widget _uploadBar() {
     final isRoute = _routeUploading && !_uploading;
@@ -751,6 +866,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     );
   }
 
+  // ── Reusable card / helpers ──────────────────────────────────────────────
+
   Widget _card(List<Widget> children) => Container(
     width: double.infinity,
     padding: const EdgeInsets.all(16),
@@ -788,7 +905,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
 
   InputDecoration _inputDec(String hint, IconData? icon) => InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+    hintStyle:
+    const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
     prefixIcon: icon != null
         ? Icon(icon, size: 18, color: AppTheme.textSecondary)
         : null,
@@ -806,88 +924,29 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       borderRadius: BorderRadius.circular(25),
       borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
     ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    contentPadding:
+    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   );
 
   Widget _textField(
-    String label,
-    TextEditingController ctrl, {
-    String? hint,
-    IconData? icon,
-    bool required = true,
-  }) {
+      String label,
+      TextEditingController ctrl, {
+        String? hint,
+        IconData? icon,
+        bool required = true,
+      }) {
     return TextFormField(
       controller: ctrl,
       style: const TextStyle(fontSize: 13, color: AppTheme.textMain),
       decoration: _inputDec(hint ?? label, icon),
       validator: required
-          ? (v) => (v == null || v.trim().isEmpty) ? 'Majburiy maydon' : null
+          ? (v) =>
+      (v == null || v.trim().isEmpty) ? 'Majburiy maydon' : null
           : null,
     );
   }
 
-  Widget _buildRegionDropdown() {
-    return GestureDetector(
-      onTap: _showRegionPicker,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F7F5),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: _selectedRegion == null
-                ? const Color(0xFFE0E0E0)
-                : AppTheme.primary.withOpacity(0.4),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.location_city_rounded,
-              size: 18,
-              color: _selectedRegion != null
-                  ? AppTheme.primary
-                  : AppTheme.textSecondary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _selectedRegion ?? 'Viloyatni tanlang...',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: _selectedRegion != null
-                      ? FontWeight.w600
-                      : FontWeight.w400,
-                  color: _selectedRegion != null
-                      ? AppTheme.textMain
-                      : AppTheme.textSecondary,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 20,
-              color: _selectedRegion != null
-                  ? AppTheme.primary
-                  : AppTheme.textSecondary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showRegionPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _RegionPickerSheet(
-        selected: _selectedRegion,
-        onChanged: (v) => setState(() => _selectedRegion = v),
-      ),
-    );
-  }
+  // ── Map picker ───────────────────────────────────────────────────────────
 
   Widget _buildMapPickerBtn() => GestureDetector(
     onTap: _openMapPicker,
@@ -912,7 +971,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
               color: AppTheme.primary,
               borderRadius: BorderRadius.circular(25),
             ),
-            child: const Icon(Icons.map_rounded, color: Colors.white, size: 20),
+            child: const Icon(Icons.map_rounded,
+                color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -943,11 +1003,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 14,
-            color: AppTheme.primary,
-          ),
+          const Icon(Icons.arrow_forward_ios_rounded,
+              size: 14, color: AppTheme.primary),
         ],
       ),
     ),
@@ -955,27 +1012,35 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
 
   Widget _dividerOr() => Row(
     children: [
-      const Expanded(child: Divider(color: Color(0xFFE0E0E0), height: 1)),
+      const Expanded(
+          child: Divider(color: Color(0xFFE0E0E0), height: 1)),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Text(
           "yoki qo'lda kiriting",
-          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+          style:
+          TextStyle(fontSize: 11, color: AppTheme.textSecondary),
         ),
       ),
-      const Expanded(child: Divider(color: Color(0xFFE0E0E0), height: 1)),
+      const Expanded(
+          child: Divider(color: Color(0xFFE0E0E0), height: 1)),
     ],
   );
 
   Widget _buildCoordFields() => Row(
     children: [
-      Expanded(child: _coordField('Kenglik (lat)', _latCtrl, '41.627')),
+      Expanded(
+          child:
+          _coordField('Kenglik (lat)', _latCtrl, '41.627')),
       const SizedBox(width: 10),
-      Expanded(child: _coordField('Uzunlik (lng)', _lngCtrl, '70.017')),
+      Expanded(
+          child:
+          _coordField('Uzunlik (lng)', _lngCtrl, '70.017')),
     ],
   );
 
-  Widget _coordField(String label, TextEditingController ctrl, String hint) =>
+  Widget _coordField(
+      String label, TextEditingController ctrl, String hint) =>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -991,25 +1056,23 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           TextFormField(
             controller: ctrl,
             keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-              signed: true,
-            ),
-            style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                decimal: true, signed: true),
+            style:
+            const TextStyle(fontSize: 13, fontFamily: 'monospace'),
             decoration: _inputDec(hint, null).copyWith(
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
+                  horizontal: 14, vertical: 10),
             ),
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Kiriting';
               final val = double.tryParse(v.trim());
               if (val == null) return 'Noto\'g\'ri';
-              // lat: -90..90, lng: -180..180
-              if (label.contains('lat') || label.contains('Kenglik')) {
+              if (label.contains('lat') ||
+                  label.contains('Kenglik')) {
                 if (val < -90 || val > 90) return '-90 dan 90 gacha';
               } else {
-                if (val < -180 || val > 180) return '-180 dan 180 gacha';
+                if (val < -180 || val > 180)
+                  return '-180 dan 180 gacha';
               }
               return null;
             },
@@ -1027,35 +1090,33 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.location_on_rounded,
-            size: 13,
-            color: AppTheme.primary,
-          ),
+          const Icon(Icons.location_on_rounded,
+              size: 13, color: AppTheme.primary),
           const SizedBox(width: 6),
           Expanded(
             child: _resolvingAddress
                 ? const Text(
-                    'Manzil aniqlanmoqda...',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textSecondary,
-                    ),
-                  )
+              'Manzil aniqlanmoqda...',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary),
+            )
                 : Text(
-                    _resolvedAddress!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 2,
-                  ),
+              _resolvedAddress!,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+            ),
           ),
         ],
       ),
     ),
   );
+
+  // ── Image picker ─────────────────────────────────────────────────────────
 
   Widget _buildImagePicker() {
     return Column(
@@ -1119,12 +1180,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
             future: file.readAsBytes(),
             builder: (_, snap) {
               if (snap.hasData) {
-                return Image.memory(
-                  snap.data!,
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                );
+                return Image.memory(snap.data!,
+                    width: 80, height: 80, fit: BoxFit.cover);
               }
               return Container(
                 width: 80,
@@ -1133,11 +1190,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                   color: const Color(0xFFF5F7F5),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.image_rounded,
-                  color: AppTheme.textSecondary,
-                  size: 28,
-                ),
+                child: const Icon(Icons.image_rounded,
+                    color: AppTheme.textSecondary, size: 28),
               );
             },
           ),
@@ -1154,7 +1208,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                 color: Colors.black.withOpacity(0.6),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.close, color: Colors.white, size: 12),
+              child: const Icon(Icons.close,
+                  color: Colors.white, size: 12),
             ),
           ),
         ),
@@ -1163,7 +1218,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
             bottom: 3,
             left: 3,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
                 color: AppTheme.primary,
                 borderRadius: BorderRadius.circular(8),
@@ -1198,11 +1254,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.add_photo_alternate_rounded,
-            color: AppTheme.primary,
-            size: 22,
-          ),
+          Icon(Icons.add_photo_alternate_rounded,
+              color: AppTheme.primary, size: 22),
           const SizedBox(height: 3),
           const Text(
             'Qo\'shish',
@@ -1221,35 +1274,38 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     required IconData icon,
     required String label,
     required VoidCallback onTap,
-  }) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F7F5),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(
-          color: AppTheme.primary.withOpacity(0.25),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppTheme.primary, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppTheme.primary,
-              fontWeight: FontWeight.w600,
+  }) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 52,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F7F5),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(
+              color: AppTheme.primary.withOpacity(0.25),
+              width: 1.5,
             ),
           ),
-        ],
-      ),
-    ),
-  );
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: AppTheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  // ── Route file picker ────────────────────────────────────────────────────
 
   Widget _buildRouteFilePicker() {
     if (_routeFile != null) {
@@ -1300,7 +1356,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Icon(Icons.check_circle_rounded, size: 12, color: color),
+                      Icon(Icons.check_circle_rounded,
+                          size: 12, color: color),
                       const SizedBox(width: 4),
                       Text(
                         'Marshrut fayli tayyor',
@@ -1324,11 +1381,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(25),
                 ),
-                child: const Icon(
-                  Icons.delete_outline_rounded,
-                  size: 17,
-                  color: Colors.red,
-                ),
+                child: const Icon(Icons.delete_outline_rounded,
+                    size: 17, color: Colors.red),
               ),
             ),
           ],
@@ -1358,11 +1412,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                 color: const Color(0xFF2563EB).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(25),
               ),
-              child: const Icon(
-                Icons.route_rounded,
-                color: Color(0xFF2563EB),
-                size: 24,
-              ),
+              child: const Icon(Icons.route_rounded,
+                  color: Color(0xFF2563EB), size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1384,35 +1435,31 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                     children: ['GPX', 'KML', 'GeoJSON']
                         .map(
                           (f) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              f,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF2563EB),
-                              ),
-                            ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2563EB)
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          f,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2563EB),
                           ),
-                        )
+                        ),
+                      ),
+                    )
                         .toList(),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
-              Icons.upload_file_rounded,
-              color: Color(0xFF2563EB),
-              size: 22,
-            ),
+            const Icon(Icons.upload_file_rounded,
+                color: Color(0xFF2563EB), size: 22),
           ],
         ),
       ),
@@ -1433,6 +1480,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     }
   }
 
+  // ── Type / Season / Tag pickers ──────────────────────────────────────────
+
   Widget _buildTypePicker() => Wrap(
     spacing: 8,
     runSpacing: 8,
@@ -1443,8 +1492,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           HapticFeedback.selectionClick();
           setState(() {
             _selectedType = t.id;
-
-            if (_selectedType != 'toglar' && _selectedType != 'choqqilar') {
+            if (_selectedType != 'toglar' &&
+                _selectedType != 'choqqilar') {
               _trekDifficulty = null;
               _trekLengthCtrl.clear();
               _trekElevationCtrl.clear();
@@ -1453,7 +1502,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+              horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: sel ? t.color : const Color(0xFFF5F7F5),
             borderRadius: BorderRadius.circular(25),
@@ -1465,14 +1515,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(t.icon, style: const TextStyle(fontSize: 13)),
+              Text(t.icon,
+                  style: const TextStyle(fontSize: 13)),
               const SizedBox(width: 5),
               Text(
                 t.label,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: sel ? Colors.white : AppTheme.textMain,
+                  color:
+                  sel ? Colors.white : AppTheme.textMain,
                 ),
               ),
             ],
@@ -1506,9 +1558,12 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: sel ? s.$4.withOpacity(0.12) : const Color(0xFFF5F7F5),
+              color: sel
+                  ? s.$4.withOpacity(0.12)
+                  : const Color(0xFFF5F7F5),
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
                 color: sel ? s.$4 : const Color(0xFFE0E0E0),
@@ -1518,7 +1573,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(s.$2, style: const TextStyle(fontSize: 14)),
+                Text(s.$2,
+                    style: const TextStyle(fontSize: 14)),
                 const SizedBox(width: 6),
                 Text(
                   s.$3,
@@ -1530,7 +1586,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                 ),
                 if (sel) ...[
                   const SizedBox(width: 4),
-                  Icon(Icons.check_circle_rounded, size: 13, color: s.$4),
+                  Icon(Icons.check_circle_rounded,
+                      size: 13, color: s.$4),
                 ],
               ],
             ),
@@ -1555,12 +1612,17 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+              horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: sel ? AppTheme.primary : const Color(0xFFF5F7F5),
+            color: sel
+                ? AppTheme.primary
+                : const Color(0xFFF5F7F5),
             borderRadius: BorderRadius.circular(25),
             border: Border.all(
-              color: sel ? AppTheme.primary : const Color(0xFFE0E0E0),
+              color: sel
+                  ? AppTheme.primary
+                  : const Color(0xFFE0E0E0),
             ),
           ),
           child: Text(
@@ -1568,7 +1630,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: sel ? Colors.white : AppTheme.textSecondary,
+              color: sel
+                  ? Colors.white
+                  : AppTheme.textSecondary,
             ),
           ),
         ),
@@ -1577,17 +1641,43 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   );
 }
 
-class _RegionPickerSheet extends StatelessWidget {
-  final String? selected;
-  final ValueChanged<String> onChanged;
+// ════════════════════════════════════════════════════════════════════════════
+// _LocationPickerSheet  — bitta sheet ichida mamlakat → viloyat
+// ════════════════════════════════════════════════════════════════════════════
 
-  const _RegionPickerSheet({required this.selected, required this.onChanged});
+class _LocationPickerSheet extends StatefulWidget {
+  final String? initialCountry;
+  final String? initialRegion;
+  final void Function(String country, String region) onSelected;
+
+  const _LocationPickerSheet({
+    required this.initialCountry,
+    required this.initialRegion,
+    required this.onSelected,
+  });
+
+  @override
+  State<_LocationPickerSheet> createState() => _LocationPickerSheetState();
+}
+
+class _LocationPickerSheetState extends State<_LocationPickerSheet> {
+  // null = mamlakat ro'yxati ko'rsatiladi
+  // non-null = o'sha mamlakat viloyatlari ko'rsatiladi
+  String? _activeCountry;
+
+  @override
+  void initState() {
+    super.initState();
+    // Agar avval mamlakat tanlangan bo'lsa, to'g'ridan viloyat sahifasiga o't
+    _activeCountry = widget.initialCountry;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      // Sheet balandligi
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.75,
+        maxHeight: MediaQuery.of(context).size.height * 0.72,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1596,101 +1686,310 @@ class _RegionPickerSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Handle bar
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.only(top: 10, bottom: 6),
+            margin: const EdgeInsets.only(top: 10, bottom: 4),
             decoration: BoxDecoration(
               color: const Color(0xFFE0E0E0),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 14),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Viloyatni tanlang',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textMain,
-                ),
-              ),
-            ),
-          ),
+
+          // Header: orqaga + sarlavha
+          _buildHeader(),
+
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+
+          // Content: AnimatedSwitcher yordamida silliq o'tish
           Flexible(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              shrinkWrap: true,
-              itemCount: kUzbekistanRegions.length,
-              itemBuilder: (_, i) {
-                final region = kUzbekistanRegions[i];
-                final sel = selected == region;
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    onChanged(region);
-                    Navigator.pop(context);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 130),
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: sel
-                          ? AppTheme.primary.withOpacity(0.09)
-                          : const Color(0xFFF5F7F5),
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(
-                        color: sel
-                            ? AppTheme.primary.withOpacity(0.5)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          sel
-                              ? Icons.location_on_rounded
-                              : Icons.location_on_outlined,
-                          size: 18,
-                          color: sel
-                              ? AppTheme.primary
-                              : AppTheme.textSecondary,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            region,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: sel
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: sel ? AppTheme.primary : AppTheme.textMain,
-                            ),
-                          ),
-                        ),
-                        if (sel)
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            color: AppTheme.primary,
-                            size: 20,
-                          ),
-                      ],
-                    ),
-                  ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, anim) {
+                // Agar activeCountry null bo'lsa (countries) → chapdan,
+                // aks holda (regions) → o'ngdan kiradi
+                final isCountryList = (child.key == const ValueKey('countries'));
+                final slideIn = Tween<Offset>(
+                  begin: Offset(isCountryList ? -0.08 : 0.08, 0),
+                  end: Offset.zero,
+                ).animate(anim);
+                return SlideTransition(
+                  position: slideIn,
+                  child: FadeTransition(opacity: anim, child: child),
                 );
               },
+              child: _activeCountry == null
+                  ? _CountryList(
+                key: const ValueKey('countries'),
+                selectedCountry: widget.initialCountry,
+                onCountryTap: (c) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _activeCountry = c);
+                },
+              )
+                  : _RegionList(
+                key: ValueKey('regions_$_activeCountry'),
+                country: _activeCountry!,
+                selectedRegion: widget.initialCountry == _activeCountry
+                    ? widget.initialRegion
+                    : null,
+                onRegionTap: (region) {
+                  HapticFeedback.selectionClick();
+                  widget.onSelected(_activeCountry!, region);
+                  Navigator.pop(context);
+                },
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 10, 20, 10),
+      child: Row(
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _activeCountry != null
+                ? GestureDetector(
+              key: const ValueKey('back_btn'),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _activeCountry = null);
+              },
+              child: Container(
+                width: 36,
+                height: 36,
+                margin: const EdgeInsets.only(left: 8, right: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F7F5),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  size: 14,
+                  color: AppTheme.textMain,
+                ),
+              ),
+            )
+                :Container(
+      width: 36,
+      height: 36,
+      margin: const EdgeInsets.only(left: 8, right: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7F5),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: const Icon(
+        Icons.select_all,
+        size: 14,
+        color: AppTheme.textMain,
+      ),
+    ),
+          ),
+
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Align(
+                key: ValueKey('title_${_activeCountry ?? "countries"}'),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _activeCountry ?? 'Davlatni tanlang',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Mamlakat ro'yxati ────────────────────────────────────────────────────────
+
+class _CountryList extends StatelessWidget {
+  final String? selectedCountry;
+  final void Function(String) onCountryTap;
+
+  const _CountryList({
+    super.key,
+    required this.selectedCountry,
+    required this.onCountryTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final countries = kRegionsByCountry.keys.toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      itemCount: countries.length,
+      itemBuilder: (_, i) {
+        final country = countries[i];
+        final regionCount = kRegionsByCountry[country]!.length;
+        final isSel = selectedCountry == country;
+
+        return GestureDetector(
+          onTap: () => onCountryTap(country),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 130),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: isSel
+                  ? AppTheme.primary.withOpacity(0.07)
+                  : const Color(0xFFF5F7F5),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSel
+                    ? AppTheme.primary.withOpacity(0.4)
+                    : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Flag / globe icon
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isSel
+                        ? AppTheme.primary.withOpacity(0.15)
+                        : const Color(0xFFE8EDE8),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.public_rounded,
+                    color: isSel ? AppTheme.primary : AppTheme.textSecondary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        country,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isSel ? AppTheme.primary : AppTheme.textMain,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$regionCount ta viloyat',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: isSel ? AppTheme.primary : AppTheme.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Viloyat ro'yxati ─────────────────────────────────────────────────────────
+
+class _RegionList extends StatelessWidget {
+  final String country;
+  final String? selectedRegion;
+  final void Function(String) onRegionTap;
+
+  const _RegionList({
+    super.key,
+    required this.country,
+    required this.selectedRegion,
+    required this.onRegionTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final regions = kRegionsByCountry[country] ?? [];
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      itemCount: regions.length,
+      itemBuilder: (_, i) {
+        final region = regions[i];
+        final isSel = selectedRegion == region;
+
+        return GestureDetector(
+          onTap: () => onRegionTap(region),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 130),
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: isSel
+                  ? AppTheme.primary.withOpacity(0.09)
+                  : const Color(0xFFF5F7F5),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: isSel
+                    ? AppTheme.primary.withOpacity(0.5)
+                    : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isSel
+                      ? Icons.location_on_rounded
+                      : Icons.location_on_outlined,
+                  size: 18,
+                  color: isSel ? AppTheme.primary : AppTheme.textSecondary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    region,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                      isSel ? FontWeight.w700 : FontWeight.w500,
+                      color: isSel ? AppTheme.primary : AppTheme.textMain,
+                    ),
+                  ),
+                ),
+                if (isSel)
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppTheme.primary,
+                    size: 20,
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
