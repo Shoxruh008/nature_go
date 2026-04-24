@@ -51,8 +51,10 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   bool _resolvingAddress = false;
 
   String? _trekDifficulty;
+  bool _requiresPermit = false;
   final _trekLengthCtrl = TextEditingController();
-  final _trekElevationCtrl = TextEditingController();
+  final _trekElevationGainCtrl = TextEditingController();
+  final _trekHeightCtrl = TextEditingController();
 
   static const List<String> _allTags = [
     'hiking',
@@ -190,8 +192,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     }
   }
 
-  // ── Country / Region picker ──────────────────────────────────────────────
-
   void _showLocationPicker() {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
@@ -210,8 +210,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       ),
     );
   }
-
-  // ────────────────────────────────────────────────────────────────────────
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -259,9 +257,13 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       final trekLength = _trekLengthCtrl.text.trim().isEmpty
           ? null
           : _trekLengthCtrl.text.trim();
-      final trekAltitude = _trekElevationCtrl.text.trim().isEmpty
+      final trekElevationGain = _trekElevationGainCtrl.text.trim().isEmpty
           ? null
-          : _trekElevationCtrl.text.trim();
+          : _trekElevationGainCtrl.text.trim();
+
+      final trekHeight = _trekHeightCtrl.text.trim().isEmpty
+          ? null
+          : _trekHeightCtrl.text.trim();
 
       final place = PlaceModel(
         id: '',
@@ -288,10 +290,16 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         (_selectedType == 'toglar' || _selectedType == 'choqqilar')
             ? _trekDifficulty
             : null,
-        trekAltitude:
+        trekElevationGain:
         (_selectedType == 'toglar' || _selectedType == 'choqqilar')
-            ? trekAltitude
+            ? trekElevationGain
             : null,
+
+        trekHeight:
+        (_selectedType == 'toglar' || _selectedType == 'choqqilar')
+            ? trekHeight
+            : null,
+        requiresPermit: _selectedType == 'choqqilar' ? _requiresPermit : null,
       );
 
       await FirebaseService.instance.addPlace(place);
@@ -335,7 +343,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     _videoCtrl.dispose();
     _phoneCtrl.dispose();
     _trekLengthCtrl.dispose();
-    _trekElevationCtrl.dispose();
+    _trekElevationGainCtrl.dispose();
+    _trekHeightCtrl.dispose();
     super.dispose();
   }
 
@@ -372,7 +381,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                         ),
                       ]),
                       const SizedBox(height: 12),
-                      // ── Mamlakat va Viloyat — bitta card ──
                       _card([
                         _secTitle('Joylashuv (mamlakat / viloyat)', '🗺️'),
                         const SizedBox(height: 12),
@@ -393,7 +401,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                           _buildTrekDifficultyPicker(),
                           const SizedBox(height: 10),
                           Text(
-                            'Uzunligi',
+                            'Uzunlik',
                             style: TextStyle(
                               fontSize: 11,
                               color: AppTheme.textSecondary,
@@ -408,7 +416,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'Ko\'tarilish balandligi',
+                            'Ko\'tarilish',
                             style: TextStyle(
                               fontSize: 11,
                               color: AppTheme.textSecondary,
@@ -416,13 +424,79 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                           ),
                           const SizedBox(height: 12),
                           _textField(
-                            'Trek ko\'tarilish balandligi',
-                            _trekElevationCtrl,
-                            hint: 'Masalan: 100m',
+                            'Ko\'tarilish',
+                            _trekElevationGainCtrl,
+                            hint: 'Masalan: 1200m',
+                            required: false,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Balandlik',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _textField(
+                            'Balandlik',
+                            _trekHeightCtrl,
+                            hint: 'Masalan: 3200m',
                             required: false,
                           ),
                         ]),
                         const SizedBox(height: 12),
+                      ],
+                      if (_selectedType == 'choqqilar') ...[
+                        _card([
+                          _secTitle('Ruxsatnoma', '📋'),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Ushbu cho\'qqiga chiqish uchun ruxsatnoma talab etiladimi?',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Switch(
+                                value: _requiresPermit,
+                                onChanged: (val) => setState(() => _requiresPermit = val),
+                                activeColor: AppTheme.primary,
+                              ),
+                            ],
+                          ),
+                          if (_requiresPermit)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Text('⚠️', style: TextStyle(fontSize: 14)),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Bu joy uchun oldindan ruxsatnoma olish talab etiladi.',
+                                        style: TextStyle(fontSize: 11, color: Color(0xFF7C5200)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ]),
+                        SizedBox(height: 12,)
                       ],
                       _card([
                         _secTitle('Mavsum', '🌤️'),
@@ -597,8 +671,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     );
   }
 
-  // ── Location selector button ─────────────────────────────────────────────
-
   Widget _buildLocationSelector() {
     final hasSelection = _selectedCountry != null && _selectedRegion != null;
 
@@ -670,8 +742,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     );
   }
 
-  // ── Trek difficulty ──────────────────────────────────────────────────────
-
   Widget _buildTrekDifficultyPicker() {
     final levels = ['Boshlang\'ich', 'O\'rta', 'Qiyin', 'O\'ta qiyin'];
     return Wrap(
@@ -703,8 +773,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       }).toList(),
     );
   }
-
-  // ── Phone field ──────────────────────────────────────────────────────────
 
   Widget _buildPhoneField() {
     return TextFormField(
@@ -774,8 +842,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     );
   }
 
-  // ── AppBar ───────────────────────────────────────────────────────────────
-
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: const Color(0xFFF5F7F5),
@@ -814,8 +880,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       centerTitle: true,
     );
   }
-
-  // ── Upload bar ───────────────────────────────────────────────────────────
 
   Widget _uploadBar() {
     final isRoute = _routeUploading && !_uploading;
@@ -865,8 +929,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       ),
     );
   }
-
-  // ── Reusable card / helpers ──────────────────────────────────────────────
 
   Widget _card(List<Widget> children) => Container(
     width: double.infinity,
@@ -945,8 +1007,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
           : null,
     );
   }
-
-  // ── Map picker ───────────────────────────────────────────────────────────
 
   Widget _buildMapPickerBtn() => GestureDetector(
     onTap: _openMapPicker,
@@ -1115,8 +1175,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
       ),
     ),
   );
-
-  // ── Image picker ─────────────────────────────────────────────────────────
 
   Widget _buildImagePicker() {
     return Column(
@@ -1305,8 +1363,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         ),
       );
 
-  // ── Route file picker ────────────────────────────────────────────────────
-
   Widget _buildRouteFilePicker() {
     if (_routeFile != null) {
       final ext = (_routeFile!.extension ?? '').toUpperCase();
@@ -1480,8 +1536,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     }
   }
 
-  // ── Type / Season / Tag pickers ──────────────────────────────────────────
-
   Widget _buildTypePicker() => Wrap(
     spacing: 8,
     runSpacing: 8,
@@ -1496,7 +1550,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                 _selectedType != 'choqqilar') {
               _trekDifficulty = null;
               _trekLengthCtrl.clear();
-              _trekElevationCtrl.clear();
+              _trekElevationGainCtrl.clear();
+              _trekHeightCtrl.clear();
+              _requiresPermit = false;
             }
           });
         },
@@ -1641,10 +1697,6 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// _LocationPickerSheet  — bitta sheet ichida mamlakat → viloyat
-// ════════════════════════════════════════════════════════════════════════════
-
 class _LocationPickerSheet extends StatefulWidget {
   final String? initialCountry;
   final String? initialRegion;
@@ -1661,21 +1713,18 @@ class _LocationPickerSheet extends StatefulWidget {
 }
 
 class _LocationPickerSheetState extends State<_LocationPickerSheet> {
-  // null = mamlakat ro'yxati ko'rsatiladi
-  // non-null = o'sha mamlakat viloyatlari ko'rsatiladi
+
   String? _activeCountry;
 
   @override
   void initState() {
     super.initState();
-    // Agar avval mamlakat tanlangan bo'lsa, to'g'ridan viloyat sahifasiga o't
     _activeCountry = widget.initialCountry;
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Sheet balandligi
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.72,
       ),
@@ -1686,7 +1735,6 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Container(
             width: 40,
             height: 4,
@@ -1697,20 +1745,16 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
             ),
           ),
 
-          // Header: orqaga + sarlavha
           _buildHeader(),
 
           const Divider(height: 1, color: Color(0xFFF0F0F0)),
 
-          // Content: AnimatedSwitcher yordamida silliq o'tish
           Flexible(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 260),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
               transitionBuilder: (child, anim) {
-                // Agar activeCountry null bo'lsa (countries) → chapdan,
-                // aks holda (regions) → o'ngdan kiradi
                 final isCountryList = (child.key == const ValueKey('countries'));
                 final slideIn = Tween<Offset>(
                   begin: Offset(isCountryList ? -0.08 : 0.08, 0),
@@ -1817,8 +1861,6 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   }
 }
 
-// ── Mamlakat ro'yxati ────────────────────────────────────────────────────────
-
 class _CountryList extends StatelessWidget {
   final String? selectedCountry;
   final void Function(String) onCountryTap;
@@ -1861,7 +1903,6 @@ class _CountryList extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Flag / globe icon
                 Container(
                   width: 40,
                   height: 40,
@@ -1914,8 +1955,6 @@ class _CountryList extends StatelessWidget {
     );
   }
 }
-
-// ── Viloyat ro'yxati ─────────────────────────────────────────────────────────
 
 class _RegionList extends StatelessWidget {
   final String country;

@@ -1061,7 +1061,101 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 2),
+                              if ((p.type == 'toglar' || p.type == 'choqqilar') &&
+                                  (p.trekElevationGain != null ||
+                                      p.trekHeight != null ||
+                                      p.trekLength != null)) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    if (p.trekLength != null)
+                                      Flexible(
+                                        child: RichText(
+                                          overflow: TextOverflow.ellipsis,
+                                          text: TextSpan(
+                                            children: [
+                                              const TextSpan(
+                                                text: "Uzunlik: ",
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Color(0xFF2E7D32), // yashil (label)
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: p.trekLength!,
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: Color(0xFF1565C0), // ko‘k (value)
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+
+                                    if (p.trekElevationGain != null) ...[
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: RichText(
+                                          overflow: TextOverflow.ellipsis,
+                                          text: TextSpan(
+                                            children: [
+                                              const TextSpan(
+                                                text: "Ko'tarilish: ",
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Color(0xFF2E7D32),
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: p.trekElevationGain!,
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: Color(0xFF1565C0),
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+
+                                    if (p.trekHeight != null) ...[
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: RichText(
+                                          overflow: TextOverflow.ellipsis,
+                                          text: TextSpan(
+                                            children: [
+                                              const TextSpan(
+                                                text: "Balandlik: ",
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Color(0xFF2E7D32),
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: p.trekHeight!,
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: Color(0xFF1565C0),
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                )
+                              ],
+                              const SizedBox(height: 4),
                               Row(
                                 children: [
                                   Container(
@@ -1077,6 +1171,73 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                             fontWeight: FontWeight.w700,
                                             color: pt.color)),
                                   ),
+                                  // if ((p.type == 'toglar' || p.type == 'choqqilar')) ...[
+                                  //   if (p.trekHeight != null) ...[
+                                  //     const SizedBox(width: 5),
+                                  //     Container(
+                                  //       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  //       decoration: BoxDecoration(
+                                  //         color: const Color(0xFF1565C0).withOpacity(0.1),
+                                  //         borderRadius: BorderRadius.circular(5),
+                                  //       ),
+                                  //       child: Row(
+                                  //         children: [
+                                  //           const Icon(Icons.height_rounded, size: 9, color: Color(0xFF1565C0)),
+                                  //           const SizedBox(width: 2),
+                                  //           Text(p.trekHeight!,
+                                  //               style: const TextStyle(
+                                  //                   fontSize: 9,
+                                  //                   color: Color(0xFF1565C0),
+                                  //                   fontWeight: FontWeight.w700)),
+                                  //         ],
+                                  //       ),
+                                  //     ),
+                                  //   ],
+                                  //
+                                  //   if (p.trekElevationGain != null) ...[
+                                  //     const SizedBox(width: 4),
+                                  //     Container(
+                                  //       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  //       decoration: BoxDecoration(
+                                  //         color: const Color(0xFF2E7D32).withOpacity(0.1),
+                                  //         borderRadius: BorderRadius.circular(5),
+                                  //       ),
+                                  //       child: Row(
+                                  //         children: [
+                                  //           const Icon(Icons.trending_up, size: 9, color: Color(0xFF2E7D32)),
+                                  //           const SizedBox(width: 2),
+                                  //           Text(p.trekElevationGain!,
+                                  //               style: const TextStyle(
+                                  //                   fontSize: 9,
+                                  //                   color: Color(0xFF2E7D32),
+                                  //                   fontWeight: FontWeight.w700)),
+                                  //         ],
+                                  //       ),
+                                  //     ),
+                                  //   ],
+                                  //
+                                  //   if (p.trekLength != null) ...[
+                                  //     const SizedBox(width: 4),
+                                  //     Container(
+                                  //       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  //       decoration: BoxDecoration(
+                                  //         color: const Color(0xFF2E7D32).withOpacity(0.1),
+                                  //         borderRadius: BorderRadius.circular(5),
+                                  //       ),
+                                  //       child: Row(
+                                  //         children: [
+                                  //           const Icon(Icons.straighten_rounded, size: 9, color: Color(0xFF2E7D32)),
+                                  //           const SizedBox(width: 2),
+                                  //           Text(p.trekLength!,
+                                  //               style: const TextStyle(
+                                  //                   fontSize: 9,
+                                  //                   color: Color(0xFF2E7D32),
+                                  //                   fontWeight: FontWeight.w700)),
+                                  //         ],
+                                  //       ),
+                                  //     ),
+                                  //   ],
+                                  // ],
                                   const Spacer(),
                                   const Icon(Icons.star_rounded,
                                       size: 12, color: Color(0xFFF59E0B)),

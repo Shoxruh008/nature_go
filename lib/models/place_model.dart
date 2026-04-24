@@ -20,7 +20,9 @@ class PlaceModel {
   final String? phone;
   final String? trekDifficulty;
   final String? trekLength;
-  final String? trekAltitude;
+  final String? trekElevationGain;
+  final String? trekHeight;
+  final bool? requiresPermit;
 
   PlaceModel({
     required this.id,
@@ -41,7 +43,9 @@ class PlaceModel {
     this.phone,
     this.trekDifficulty,
     this.trekLength,
-    this.trekAltitude,
+    this.trekElevationGain,
+    this.trekHeight,
+    this.requiresPermit,
   });
 
   double? distanceTo;
@@ -67,7 +71,9 @@ class PlaceModel {
       phone: d['phone'] as String?,
       trekDifficulty: d['trekDifficulty'] as String?,
       trekLength: d['trekLength'] as String?,
-      trekAltitude: d['trekElevation'] as String?,
+      trekElevationGain: (d['trekElevationGain'] ?? d['trekElevation']) as String?,
+      trekHeight: d['trekHeight'] as String?,
+      requiresPermit: d['requiresPermit'] as bool?,
     );
   }
 
@@ -89,7 +95,9 @@ class PlaceModel {
     if (phone != null) 'phone': phone,
     if (trekDifficulty != null) 'trekDifficulty': trekDifficulty,
     if (trekLength != null) 'trekLength': trekLength,
-    if (trekAltitude != null) 'trekElevation': trekAltitude,
+    if (trekElevationGain != null) 'trekElevationGain': trekElevationGain,
+    if (trekHeight != null) 'trekHeight': trekHeight,
+    if (requiresPermit != null) 'requiresPermit': requiresPermit,
   };
 
   PlaceType get placeType => placeTypeFromId(type);

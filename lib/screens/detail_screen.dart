@@ -274,9 +274,16 @@ class _DetailScreenState extends State<DetailScreen> {
                   _buildDescription(p),
                 ],
                 if ((p.type == 'toglar' || p.type == 'choqqilar') &&
-                    (p.trekDifficulty != null || p.trekLength != null)) ...[
+                    (p.trekDifficulty != null ||
+                        p.trekLength != null ||
+                        p.trekElevationGain != null ||
+                        p.trekHeight != null)) ...[
                   const SizedBox(height: 14),
                   _buildTrekInfo(p),
+                ],
+                if (p.type == 'choqqilar' && p.requiresPermit != null)...[
+                  const SizedBox(height: 14),
+                  _buildPermitCard(),
                 ],
                 if (p.routeFileUrl != null) ...[
                   const SizedBox(height: 14),
@@ -532,14 +539,14 @@ class _DetailScreenState extends State<DetailScreen> {
             ),
           ],
 
-          if (p.trekAltitude != null) ...[
+          if (p.trekElevationGain != null) ...[
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.height, size: 16, color: AppTheme.primary),
+                const Icon(Icons.trending_up, size: 16, color: AppTheme.primary),
                 const SizedBox(width: 6),
                 Text(
-                  'Ko\'tarilish balandligi: ${p.trekAltitude}',
+                  'Ko\'tarilish: ${p.trekElevationGain}',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -549,6 +556,70 @@ class _DetailScreenState extends State<DetailScreen> {
               ],
             ),
           ],
+
+          if (p.trekHeight != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.height, size: 16, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Balandlik: ${p.trekHeight}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermitCard() {
+    return _SectionCard(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF6F00).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Center(
+              child: Text('📋', style: TextStyle(fontSize: 22)),
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ruxsatnoma talab etiladi',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFFF6F00),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Ushbu cho\'qqiga chiqish uchun oldindan ruxsatnoma olish majburiy.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
