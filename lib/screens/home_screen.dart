@@ -9,10 +9,8 @@ import '../models/place_model.dart';
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
 import '../widgets/favourite_button.dart';
-import 'add_place_screen.dart';
 import 'detail_screen.dart';
 import 'donate_page.dart';
-import 'favourites_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,8 +19,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  int _currentIndex = 0;
-
   List<PlaceModel> _allPlaces = [];
   List<PlaceModel> _filtered = [];
   bool _loading = true;
@@ -50,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _headerAnim.forward();
     _scrollCtrl.addListener(_onScroll);
     _searchFocus.addListener(
-            () => setState(() => _searchFocused = _searchFocus.hasFocus));
+        () => setState(() => _searchFocused = _searchFocus.hasFocus));
     _initLocation();
     _listenPlaces();
   }
@@ -69,13 +65,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             .getCityName(pos.latitude, pos.longitude);
         setState(() {
           _userPos = pos;
-          _cityName = city ?? 'Noma\'lum';
+          _cityName = city ?? "Noma'lum";
           _locationLoading = false;
           _applyFiltersInner();
         });
       } else if (mounted) {
         setState(() {
-          _cityName = 'Ruxsat yo\'q';
+          _cityName = "Ruxsat yo'q";
           _locationLoading = false;
         });
       }
@@ -113,8 +109,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       result = result.where((p) => p.type == _selectedType).toList();
     }
     if (_selectedSeason != 'all') {
-      result =
-          result.where((p) => p.seasonTypes.contains(_selectedSeason)).toList();
+      result = result.where((p) => p.seasonTypes.contains(_selectedSeason)).toList();
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -137,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             .toList();
       }
       result.sort(
-              (a, b) => (a.distanceTo ?? 9999).compareTo(b.distanceTo ?? 9999));
+          (a, b) => (a.distanceTo ?? 9999).compareTo(b.distanceTo ?? 9999));
     }
 
     _filtered = result;
@@ -157,162 +152,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _onNavTap(int index) {
-    if (index == 1) {
-      _showAddPromoSheet();
-      return;
-    }
-    setState(() => _currentIndex = index);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7F5),
-        body: IndexedStack(
-          index: _currentIndex == 2 ? 1 : 0,
-          children: [
-            Stack(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F5),
+      body: Stack(
+        children: [
+          _buildBg(),
+          SafeArea(
+            child: Column(
               children: [
-                _buildBg(),
-                SafeArea(
-                  child: Column(
-                    children: [
-                      _buildHeader(),
-                      _buildSearch(),
-                      _buildSeasonChips(),
-                      _buildTypeChips(),
-                      const SizedBox(height: 6),
-                      Expanded(child: _buildBody()),
-                    ],
-                  ),
-                ),
+                _buildHeader(),
+                _buildSearch(),
+                _buildSeasonChips(),
+                _buildTypeChips(),
+                const SizedBox(height: 6),
+                Expanded(child: _buildBody()),
               ],
             ),
-            const FavouritesScreen(),
-          ],
-        ),
-        bottomNavigationBar: _buildBottomNavBar(),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
           ),
         ],
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: [
-              _buildNavItem(
-                index: 0,
-                icon: Icons.home_rounded,
-                label: 'Bosh sahifa',
-              ),
-              _buildNavAddButton(),
-              _buildNavItem(
-                index: 2,
-                icon: Icons.favorite_rounded,
-                label: 'Sevimlilar',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required int index,
-    required IconData icon,
-    required String label,
-    Color? activeColor,
-  }) {
-    final isActive = _currentIndex == index;
-    final color = activeColor ?? AppTheme.primary;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _onNavTap(index),
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: isActive ? color.withOpacity(0.12) : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: isActive ? color : const Color(0xFFB0BDB0),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                color: isActive ? color : const Color(0xFFB0BDB0),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavAddButton() {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _onNavTap(1),
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.add_location_alt_rounded,
-                size: 24,
-                color: Color(0xFFB0BDB0),
-              ),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              "Joy qo'shish",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFFB0BDB0),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -342,8 +201,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Row(
               children: [
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppTheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -402,18 +260,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: (){
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => DonatePage()));
+                  onTap: () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => DonatePage()));
                   },
                   child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppTheme.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text("Donat qilish",
-                      style: const TextStyle(
+                    child: const Text("Donat qilish",
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.primary,
                         fontWeight: FontWeight.w600,
@@ -437,8 +295,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (!mounted) return;
       _showLocationDialog(
         icon: Icons.location_off_rounded,
-        title: 'GPS o\'chirilgan',
-        message: 'Joylashuvni aniqlash uchun qurilmangizda GPS ni yoqing.',
+        title: "GPS o'chirilgan",
+        message: "Joylashuvni aniqlash uchun qurilmangizda GPS ni yoqing.",
         actionLabel: 'GPS sozlamalarini ochish',
         onAction: () => Geolocator.openLocationSettings(),
       );
@@ -453,8 +311,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         icon: Icons.location_disabled_rounded,
         title: 'Ruxsat berilmagan',
         message: permission == LocationPermission.deniedForever
-            ? 'Joylashuv ruxsati doimiy rad etilgan. Sozlamalarda qo\'lda yoqing.'
-            : 'Ilovaga joylashuvdan foydalanish uchun ruxsat bering.',
+            ? "Joylashuv ruxsati doimiy rad etilgan. Sozlamalarda qo'lda yoqing."
+            : "Ilovaga joylashuvdan foydalanish uchun ruxsat bering.",
         actionLabel: permission == LocationPermission.deniedForever
             ? 'Ilova sozlamalarini ochish'
             : 'Ruxsat berish',
@@ -650,8 +508,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     top: 8,
                     bottom: 4,
                   ),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
                   decoration: BoxDecoration(
                     color: sel ? color : Colors.white,
                     borderRadius: BorderRadius.circular(18),
@@ -728,8 +585,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               margin: const EdgeInsets.only(bottom: 7, top: 7),
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: sel ? t.color : Colors.white,
                 borderRadius: BorderRadius.circular(18),
@@ -852,42 +708,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     p.images.isNotEmpty
                         ? (kIsWeb
-                        ? Image.network(
-                        p.images.first,
-                        fit: BoxFit.cover,
+                        ? Image.network(p.images.first, fit: BoxFit.cover,
                         loadingBuilder: (_, child, progress) =>
-                        progress == null
-                            ? child
-                            : Container(color: pt.bg),
+                        progress == null ? child : Container(color: pt.bg),
                         errorBuilder: (_, __, ___) => Container(
                             color: pt.bg,
-                            child: Center(
-                                child: Text(pt.icon,
-                                    style: const TextStyle(fontSize: 40)))))
-                        : CachedNetworkImage(
-                        imageUrl: p.images.first,
-                        fit: BoxFit.cover,
+                            child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40)))))
+                        : CachedNetworkImage(imageUrl: p.images.first, fit: BoxFit.cover,
                         placeholder: (_, __) => Container(color: pt.bg),
                         errorWidget: (_, __, ___) => Container(
                             color: pt.bg,
-                            child: Center(
-                                child: Text(pt.icon,
-                                    style: const TextStyle(fontSize: 40))))))
+                            child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40))))))
                         : Container(
                         color: pt.bg,
-                        child: Center(
-                            child: Text(pt.icon,
-                                style: const TextStyle(fontSize: 40)))),
+                        child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40)))),
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.68)
-                            ],
+                            colors: [Colors.transparent, Colors.black.withOpacity(0.68)],
                             stops: const [0.38, 1.0],
                           ),
                         ),
@@ -896,58 +737,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Positioned(
                       top: 8,
                       right: 8,
-                      child: FavouriteButton(
-                        placeId: p.id,
-                        size: 32,
-                        dark: true,
-                      ),
+                      child: FavouriteButton(placeId: p.id, size: 32, dark: true),
                     ),
                     Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
+                      bottom: 0, left: 0, right: 0,
                       child: Padding(
                         padding: const EdgeInsets.all(11),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(p.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.2)),
+                            Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on_rounded,
-                                    size: 10, color: Colors.white70),
-                                const SizedBox(width: 2),
-                                Expanded(
-                                  child: Text(p.region,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: Colors.white70, fontSize: 10)),
-                                ),
-                              ],
-                            ),
+                            Row(children: [
+                              const Icon(Icons.location_on_rounded, size: 10, color: Colors.white70),
+                              const SizedBox(width: 2),
+                              Expanded(child: Text(p.region, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 10))),
+                            ]),
                             const SizedBox(height: 5),
-                            Row(
-                              children: [
-                                const Icon(Icons.star_rounded,
-                                    size: 12, color: Color(0xFFF59E0B)),
-                                const SizedBox(width: 3),
-                                Text(p.baseRating.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700)),
-                              ],
-                            ),
+                            Row(children: [
+                              const Icon(Icons.star_rounded, size: 12, color: Color(0xFFF59E0B)),
+                              const SizedBox(width: 3),
+                              Text(p.baseRating.toStringAsFixed(1),
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                            ]),
                           ],
                         ),
                       ),
@@ -967,7 +782,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-              (_, i) {
+          (_, i) {
             final p = _filtered[i];
             final pt = p.placeType;
             return Padding(
@@ -980,297 +795,72 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.055),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3))
+                      BoxShadow(color: Colors.black.withOpacity(0.055), blurRadius: 10, offset: const Offset(0, 3))
                     ],
                   ),
                   child: Row(
                     children: [
                       ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(
-                            left: Radius.circular(18)),
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
                         child: SizedBox(
-                          width: 104,
-                          height: 104,
+                          width: 104, height: 104,
                           child: p.images.isNotEmpty
                               ? (kIsWeb
-                              ? Image.network(
-                              p.images.first,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (_, child, progress) =>
-                              progress == null
-                                  ? child
-                                  : Container(color: pt.bg),
-                              errorBuilder: (_, __, ___) => Container(
-                                  color: pt.bg,
-                                  child: Center(
-                                      child: Text(pt.icon,
-                                          style: const TextStyle(
-                                              fontSize: 26)))))
-                              : CachedNetworkImage(
-                              imageUrl: p.images.first,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) =>
-                                  Container(color: pt.bg),
-                              errorWidget: (_, __, ___) => Container(
-                                  color: pt.bg,
-                                  child: Center(
-                                      child: Text(pt.icon,
-                                          style: const TextStyle(
-                                              fontSize: 26))))))
-                              : Container(
-                              color: pt.bg,
-                              child: Center(
-                                  child: Text(pt.icon,
-                                      style: const TextStyle(
-                                          fontSize: 26)))),
+                              ? Image.network(p.images.first, fit: BoxFit.cover,
+                              loadingBuilder: (_, child, progress) => progress == null ? child : Container(color: pt.bg),
+                              errorBuilder: (_, __, ___) => Container(color: pt.bg,
+                                  child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 26)))))
+                              : CachedNetworkImage(imageUrl: p.images.first, fit: BoxFit.cover,
+                              placeholder: (_, __) => Container(color: pt.bg),
+                              errorWidget: (_, __, ___) => Container(color: pt.bg,
+                                  child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 26))))))
+                              : Container(color: pt.bg,
+                              child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 26)))),
                         ),
                       ),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(p.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.textMain)),
+                              Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textMain)),
                               const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_on_rounded,
-                                      size: 11,
-                                      color: AppTheme.textSecondary),
-                                  const SizedBox(width: 2),
-                                  Expanded(
-                                    child: Text(p.region,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppTheme.textSecondary)),
-                                  ),
-                                ],
-                              ),
-                              if ((p.type == 'toglar' || p.type == 'choqqilar') &&
-                                  (p.trekElevationGain != null ||
-                                      p.trekHeight != null ||
-                                      p.trekLength != null)) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    if (p.trekLength != null)
-                                      Flexible(
-                                        child: RichText(
-                                          overflow: TextOverflow.ellipsis,
-                                          text: TextSpan(
-                                            children: [
-                                              const TextSpan(
-                                                text: "Uzunlik: ",
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Color(0xFF2E7D32), // yashil (label)
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: p.trekLength!,
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  color: Color(0xFF1565C0), // ko‘k (value)
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-
-                                    if (p.trekElevationGain != null) ...[
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        child: RichText(
-                                          overflow: TextOverflow.ellipsis,
-                                          text: TextSpan(
-                                            children: [
-                                              const TextSpan(
-                                                text: "Ko'tarilish: ",
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Color(0xFF2E7D32),
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: p.trekElevationGain!,
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  color: Color(0xFF1565C0),
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-
-                                    if (p.trekHeight != null) ...[
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        child: RichText(
-                                          overflow: TextOverflow.ellipsis,
-                                          text: TextSpan(
-                                            children: [
-                                              const TextSpan(
-                                                text: "Balandlik: ",
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Color(0xFF2E7D32),
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: p.trekHeight!,
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  color: Color(0xFF1565C0),
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                )
-                              ],
+                              Row(children: [
+                                const Icon(Icons.location_on_rounded, size: 11, color: AppTheme.textSecondary),
+                                const SizedBox(width: 2),
+                                Expanded(child: Text(p.region, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary))),
+                              ]),
                               const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                        color: pt.bg,
-                                        borderRadius:
-                                        BorderRadius.circular(5)),
-                                    child: Text('${pt.icon} ${pt.label}',
-                                        style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w700,
-                                            color: pt.color)),
-                                  ),
-                                  // if ((p.type == 'toglar' || p.type == 'choqqilar')) ...[
-                                  //   if (p.trekHeight != null) ...[
-                                  //     const SizedBox(width: 5),
-                                  //     Container(
-                                  //       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  //       decoration: BoxDecoration(
-                                  //         color: const Color(0xFF1565C0).withOpacity(0.1),
-                                  //         borderRadius: BorderRadius.circular(5),
-                                  //       ),
-                                  //       child: Row(
-                                  //         children: [
-                                  //           const Icon(Icons.height_rounded, size: 9, color: Color(0xFF1565C0)),
-                                  //           const SizedBox(width: 2),
-                                  //           Text(p.trekHeight!,
-                                  //               style: const TextStyle(
-                                  //                   fontSize: 9,
-                                  //                   color: Color(0xFF1565C0),
-                                  //                   fontWeight: FontWeight.w700)),
-                                  //         ],
-                                  //       ),
-                                  //     ),
-                                  //   ],
-                                  //
-                                  //   if (p.trekElevationGain != null) ...[
-                                  //     const SizedBox(width: 4),
-                                  //     Container(
-                                  //       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  //       decoration: BoxDecoration(
-                                  //         color: const Color(0xFF2E7D32).withOpacity(0.1),
-                                  //         borderRadius: BorderRadius.circular(5),
-                                  //       ),
-                                  //       child: Row(
-                                  //         children: [
-                                  //           const Icon(Icons.trending_up, size: 9, color: Color(0xFF2E7D32)),
-                                  //           const SizedBox(width: 2),
-                                  //           Text(p.trekElevationGain!,
-                                  //               style: const TextStyle(
-                                  //                   fontSize: 9,
-                                  //                   color: Color(0xFF2E7D32),
-                                  //                   fontWeight: FontWeight.w700)),
-                                  //         ],
-                                  //       ),
-                                  //     ),
-                                  //   ],
-                                  //
-                                  //   if (p.trekLength != null) ...[
-                                  //     const SizedBox(width: 4),
-                                  //     Container(
-                                  //       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  //       decoration: BoxDecoration(
-                                  //         color: const Color(0xFF2E7D32).withOpacity(0.1),
-                                  //         borderRadius: BorderRadius.circular(5),
-                                  //       ),
-                                  //       child: Row(
-                                  //         children: [
-                                  //           const Icon(Icons.straighten_rounded, size: 9, color: Color(0xFF2E7D32)),
-                                  //           const SizedBox(width: 2),
-                                  //           Text(p.trekLength!,
-                                  //               style: const TextStyle(
-                                  //                   fontSize: 9,
-                                  //                   color: Color(0xFF2E7D32),
-                                  //                   fontWeight: FontWeight.w700)),
-                                  //         ],
-                                  //       ),
-                                  //     ),
-                                  //   ],
-                                  // ],
-                                  const Spacer(),
-                                  const Icon(Icons.star_rounded,
-                                      size: 12, color: Color(0xFFF59E0B)),
-                                  const SizedBox(width: 2),
-                                  Text(p.baseRating.toStringAsFixed(1),
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppTheme.textMain)),
-                                  if (p.distanceTo != null) ...[
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      LocationService.instance
-                                          .formatDistance(p.distanceTo!),
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppTheme.primary,
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                  ],
+                              Row(children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: pt.bg, borderRadius: BorderRadius.circular(5)),
+                                  child: Text('${pt.icon} ${pt.label}',
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: pt.color)),
+                                ),
+                                const Spacer(),
+                                const Icon(Icons.star_rounded, size: 12, color: Color(0xFFF59E0B)),
+                                const SizedBox(width: 2),
+                                Text(p.baseRating.toStringAsFixed(1),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textMain)),
+                                if (p.distanceTo != null) ...[
+                                  const SizedBox(width: 6),
+                                  Text(LocationService.instance.formatDistance(p.distanceTo!),
+                                      style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
                                 ],
-                              ),
+                              ]),
                             ],
                           ),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.only(right: 10),
-                        child: FavouriteButton(
-                          placeId: p.id,
-                          size: 30,
-                          dark: false,
-                        ),
+                        child: FavouriteButton(placeId: p.id, size: 30, dark: false),
                       ),
                     ],
                   ),
@@ -1290,10 +880,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       PageRouteBuilder(
         pageBuilder: (_, anim, __) => DetailScreen(placeId: p.id),
         transitionsBuilder: (_, anim, __, child) => SlideTransition(
-          position: Tween<Offset>(
-              begin: const Offset(0, 0.06), end: Offset.zero)
-              .animate(
-              CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+          position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
+              .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
           child: FadeTransition(opacity: anim, child: child),
         ),
       ),
@@ -1304,13 +892,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        CircularProgressIndicator(
-            color: AppTheme.primary, strokeWidth: 2.5),
+        CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5),
         SizedBox(height: 16),
-        Text('Yuklanmoqda...',
-            style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontWeight: FontWeight.w500)),
+        Text('Yuklanmoqda...', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w500)),
       ],
     ),
   );
@@ -1322,27 +906,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFEBEE),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-                child: Text('📡', style: TextStyle(fontSize: 34))),
+            width: 76, height: 76,
+            decoration: const BoxDecoration(color: Color(0xFFFFEBEE), shape: BoxShape.circle),
+            child: const Center(child: Text('📡', style: TextStyle(fontSize: 34))),
           ),
           const SizedBox(height: 14),
           const Text('Internet bilan muammo',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textMain)),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textMain)),
           const SizedBox(height: 5),
-          const Text(
-            'Internetni tekshirib, qayta urinib ko\'ring',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-          ),
+          const Text("Internetni tekshirib, qayta urinib ko'ring",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           const SizedBox(height: 20),
           GestureDetector(
             onTap: () {
@@ -1351,15 +925,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(25),
-              ),
+              decoration: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(25)),
               child: const Text('Qayta urinish',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13)),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
             ),
           ),
         ],
@@ -1372,136 +940,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 76,
-          height: 76,
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child:
-          const Center(child: Text('🔍', style: TextStyle(fontSize: 34))),
+          width: 76, height: 76,
+          decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), shape: BoxShape.circle),
+          child: const Center(child: Text('🔍', style: TextStyle(fontSize: 34))),
         ),
         const SizedBox(height: 14),
         const Text('Joy topilmadi',
-            style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textMain)),
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textMain)),
         const SizedBox(height: 5),
         Text(
-          _userPos == null
-              ? 'Joylashuvga ruxsat bering'
-              : "Boshqa filtr yoki kalit so'z kiriting",
-          style: const TextStyle(
-              color: AppTheme.textSecondary, fontSize: 13),
+          _userPos == null ? 'Joylashuvga ruxsat bering' : "Boshqa filtr yoki kalit so'z kiriting",
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
         ),
       ],
     ),
   );
-
-  void _showAddPromoSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _AddPromoSheet(
-        onAddTap: () {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, anim, __) => const AddPlaceScreen(),
-              transitionsBuilder: (_, anim, __, child) => SlideTransition(
-                position: Tween<Offset>(
-                    begin: const Offset(0, 0.06), end: Offset.zero)
-                    .animate(CurvedAnimation(
-                    parent: anim, curve: Curves.easeOutCubic)),
-                child: FadeTransition(opacity: anim, child: child),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _AddPromoSheet extends StatelessWidget {
-  final VoidCallback onAddTap;
-  const _AddPromoSheet({required this.onAddTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          Image.asset(
-            'assets/c1.png',
-            width: 150,
-            height: 150,
-          ),
-          const Text(
-            "Ko'proq joy qo'shing",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textMain,
-                letterSpacing: -0.3),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Ko\'proq yangi joy qo\'shing , agar admin tomonidan tasdiqlanib dasturga qo\'shilsa biz sizga pul mukofotini taqdim qilamiz!!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 15,
-                color: AppTheme.textSecondary,
-                fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: onAddTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
-                elevation: 0,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_location_alt_rounded,
-                      color: Colors.white, size: 20),
-                  SizedBox(width: 10),
-                  Text(
-                    "Joy qo'shish",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

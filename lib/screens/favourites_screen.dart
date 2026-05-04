@@ -28,7 +28,6 @@ class _FavouritesScreenState extends State<FavouritesScreen>
   void initState() {
     super.initState();
     _loadFavourites();
-    // FavouriteButton o'zgarsa — ro'yxatni yangilash
     FavouritesService.instance.addListener(_onFavouritesChanged);
   }
 
@@ -105,7 +104,7 @@ class _FavouritesScreenState extends State<FavouritesScreen>
               color: AppTheme.textMain,
               letterSpacing: -0.3),
         ),
-        centerTitle: true,
+        centerTitle: false,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: Colors.black.withOpacity(0.06)),
