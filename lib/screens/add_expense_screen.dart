@@ -8,8 +8,13 @@ import '../utils/money.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   final Trip trip;
+  final Expense? editExpense; // <- tahrirlash uchun
 
-  const AddExpenseScreen({super.key, required this.trip});
+  const AddExpenseScreen({
+    super.key,
+    required this.trip,
+    this.editExpense,
+  });
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -24,11 +29,24 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String _selectedCategory = 'other';
   bool _isSaving = false;
 
+  bool get _isEditing => widget.editExpense != null;
+
   @override
   void initState() {
     super.initState();
-    if (widget.trip.members.isNotEmpty) {
-      _selectedPayerId = widget.trip.members.first.id;
+
+    if (_isEditing) {
+      // Tahrirlash rejimi: mavjud qiymatlarni to'ldirish
+      final e = widget.editExpense!;
+      _titleController.text = e.title;
+      _amountController.text = e.amount.toInt().toString();
+      _selectedPayerId = e.payerId;
+      _selectedCategory = e.category;
+    } else {
+      // Qo'shish rejimi
+      if (widget.trip.members.isNotEmpty) {
+        _selectedPayerId = widget.trip.members.first.id;
+      }
     }
   }
 
@@ -46,29 +64,31 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     setState(() => _isSaving = true);
     HapticFeedback.mediumImpact();
 
-    final expense = Expense(
-      title: _titleController.text.trim(),
-      amount: double.parse(_amountController.text.replaceAll(' ', '')),
-      payerId: _selectedPayerId!,
-      category: _selectedCategory,
-    );
+    if (_isEditing) {
+      // Mavjud xarajatni yangilash
+      final idx = widget.trip.expenses
+          .indexWhere((e) => e.id == widget.editExpense!.id);
+      if (idx >= 0) {
+        widget.trip.expenses[idx] = Expense(
+          id: widget.editExpense!.id, // ID saqlanadi
+          title: _titleController.text.trim(),
+          amount: double.parse(_amountController.text.replaceAll(' ', '')),
+          payerId: _selectedPayerId!,
+          category: _selectedCategory,
+        );
+      }
+    } else {
+      // Yangi xarajat qo'shish
+      widget.trip.expenses.add(Expense(
+        title: _titleController.text.trim(),
+        amount: double.parse(_amountController.text.replaceAll(' ', '')),
+        payerId: _selectedPayerId!,
+        category: _selectedCategory,
+      ));
+    }
 
-    widget.trip.expenses.add(expense);
     await StorageService.saveTrip(widget.trip);
-
     if (mounted) Navigator.pop(context, true);
-  }
-
-  void _showSnack(String msg, {bool error = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: error ? Colors.red : AppTheme.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
   }
 
   @override
@@ -163,18 +183,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         strokeWidth: 2.5,
                       ),
                     )
-                        : const Row(
+                        : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.check_circle_outline_rounded,
+                          _isEditing
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.check_circle_outline_rounded,
                           color: Colors.white,
                           size: 20,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
-                          'Xarajatni saqlash',
-                          style: TextStyle(
+                          _isEditing
+                              ? 'O\'zgarishlarni saqlash'
+                              : 'Xarajatni saqlash',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -220,9 +244,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           ),
         ),
       ),
-      title: const Text(
-        'Xarajat qo\'shish',
-        style: TextStyle(
+      title: Text(
+        _isEditing ? 'Xarajatni tahrirlash' : 'Xarajat qo\'shish',
+        style: const TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w800,
           color: AppTheme.textMain,
@@ -419,8 +443,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color:
-                          selected ? color : AppTheme.textMain,
+                          color: selected ? color : AppTheme.textMain,
                         ),
                       ),
                     ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../models/trip.dart';
+import '../models/member.dart';
 import '../models/expense.dart';
 import '../services/storage_service.dart';
 import '../services/share_service.dart';
@@ -43,6 +44,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     });
   }
 
+  // ─── Xarajat: qo'shish ───────────────────────────────────────────────────
   void _openAddExpense() async {
     if (_trip == null) return;
     HapticFeedback.mediumImpact();
@@ -53,6 +55,174 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     if (result == true) _loadTrip();
   }
 
+  // ─── Xarajat: tahrirlash ─────────────────────────────────────────────────
+  void _openEditExpense(Expense expense) async {
+    if (_trip == null) return;
+    HapticFeedback.mediumImpact();
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddExpenseScreen(trip: _trip!, editExpense: expense),
+      ),
+    );
+    if (result == true) _loadTrip();
+  }
+
+  // ─── Xarajat: o'chirish confirm ──────────────────────────────────────────
+  void _confirmDeleteExpense(Expense expense) {
+    HapticFeedback.selectionClick();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Text('🗑️', style: TextStyle(fontSize: 20)),
+            SizedBox(width: 8),
+            Text(
+              'O\'chirishni tasdiqlang',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textMain,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          '"${expense.title}" xarajatini rostan ham o\'chirmoqchimisiz?',
+          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Bekor qilish',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(
+                      () => _trip!.expenses.removeWhere((e) => e.id == expense.id));
+              await StorageService.saveTrip(_trip!);
+              _loadTrip();
+            },
+            child: const Text(
+              'O\'chirish',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Ishtirokchi: qo'shish ────────────────────────────────────────────────
+  void _showAddMemberDialog() {
+    HapticFeedback.mediumImpact();
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => _MemberDialog(
+        title: 'Ishtirokchi qo\'shish',
+        icon: '👤',
+        controller: controller,
+        onSave: (name) async {
+          if (name.trim().isEmpty) return;
+          _trip!.members.add(Member(name: name.trim()));
+          await StorageService.saveTrip(_trip!);
+          _loadTrip();
+        },
+      ),
+    );
+  }
+
+  // ─── Ishtirokchi: tahrirlash ──────────────────────────────────────────────
+  void _showEditMemberDialog(Member member) {
+    HapticFeedback.mediumImpact();
+    final controller = TextEditingController(text: member.name);
+    showDialog(
+      context: context,
+      builder: (ctx) => _MemberDialog(
+        title: 'Tahrirlash',
+        icon: '✏️',
+        controller: controller,
+        onSave: (name) async {
+          if (name.trim().isEmpty) return;
+          final idx = _trip!.members.indexWhere((m) => m.id == member.id);
+          if (idx >= 0) {
+            _trip!.members[idx] = Member(id: member.id, name: name.trim());
+            await StorageService.saveTrip(_trip!);
+            _loadTrip();
+          }
+        },
+      ),
+    );
+  }
+
+  // ─── Ishtirokchi: o'chirish confirm ──────────────────────────────────────
+  void _confirmDeleteMember(Member member) {
+    HapticFeedback.selectionClick();
+    final hasPaid = _trip!.expenses.any((e) => e.payerId == member.id);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Text('👤', style: TextStyle(fontSize: 20)),
+            SizedBox(width: 8),
+            Text(
+              'Ishtirokchini o\'chirish',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textMain,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          hasPaid
+              ? '"${member.name}" ga tegishli xarajatlar mavjud. Baribir o\'chirilsinmi?'
+              : '"${member.name}" ni rostan ham o\'chirmoqchimisiz?',
+          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Bekor qilish',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(
+                      () => _trip!.members.removeWhere((m) => m.id == member.id));
+              await StorageService.saveTrip(_trip!);
+              _loadTrip();
+            },
+            child: const Text(
+              'O\'chirish',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Natija ───────────────────────────────────────────────────────────────
   void _openResult() {
     if (_trip == null) return;
     if (_trip!.members.isEmpty) {
@@ -70,13 +240,6 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     );
   }
 
-  void _deleteExpense(Expense expense) async {
-    HapticFeedback.selectionClick();
-    setState(() => _trip!.expenses.removeWhere((e) => e.id == expense.id));
-    await StorageService.saveTrip(_trip!);
-    _loadTrip();
-  }
-
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -89,6 +252,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     );
   }
 
+  // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_trip == null) {
@@ -232,10 +396,9 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                 ),
               ),
               Container(
-                width: 1,
-                height: 40,
-                color: Colors.white.withOpacity(0.25),
-              ),
+                  width: 1,
+                  height: 40,
+                  color: Colors.white.withOpacity(0.25)),
               Expanded(
                 child: _StatItem(
                   label: 'Har biri',
@@ -244,10 +407,9 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                 ),
               ),
               Container(
-                width: 1,
-                height: 40,
-                color: Colors.white.withOpacity(0.25),
-              ),
+                  width: 1,
+                  height: 40,
+                  color: Colors.white.withOpacity(0.25)),
               Expanded(
                 child: _StatItem(
                   label: 'Xarajatlar',
@@ -272,10 +434,8 @@ class _TripDetailScreenState extends State<TripDetailScreen>
           unselectedLabelColor: AppTheme.textSecondary,
           indicatorColor: AppTheme.primary,
           indicatorSize: TabBarIndicatorSize.label,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-          ),
+          labelStyle:
+          const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           tabs: const [
             Tab(text: 'Xarajatlar'),
             Tab(text: 'Ishtirokchilar'),
@@ -287,6 +447,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     );
   }
 
+  // ─── Xarajatlar tab ───────────────────────────────────────────────────────
   Widget _buildExpensesTab() {
     if (_trip!.expenses.isEmpty) {
       return _buildEmpty(
@@ -320,7 +481,8 @@ class _TripDetailScreenState extends State<TripDetailScreen>
                   expense: expense,
                   payerName: payer?.name ?? '?',
                   payerColor: color,
-                  onDelete: () => _deleteExpense(expense),
+                  onEdit: () => _openEditExpense(expense),
+                  onDelete: () => _confirmDeleteExpense(expense),
                 ),
               ),
             ),
@@ -330,48 +492,91 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     );
   }
 
+  // ─── Ishtirokchilar tab ───────────────────────────────────────────────────
   Widget _buildMembersTab() {
-    if (_trip!.members.isEmpty) {
-      return _buildEmpty(
-        emoji: '👥',
-        title: 'Ishtirokchi yo\'q',
-        subtitle: 'Sayohatni tahrirlash uchun orqaga qayting',
-      );
-    }
-
     final balances = _trip!.balances;
 
     return AnimationLimiter(
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         physics: const BouncingScrollPhysics(),
-        itemCount: _trip!.members.length,
-        itemBuilder: (ctx, i) {
-          final member = _trip!.members[i];
-          final color =
-          AppTheme.memberColors[i % AppTheme.memberColors.length];
-          final balance = balances[member.id] ?? 0;
-          final paid = _trip!.expenses
-              .where((e) => e.payerId == member.id)
-              .fold(0.0, (s, e) => s + e.amount);
-
-          return AnimationConfiguration.staggeredList(
-            position: i,
-            duration: const Duration(milliseconds: 350),
-            child: SlideAnimation(
-              horizontalOffset: 40,
-              child: FadeInAnimation(
-                child: _MemberCard(
-                  name: member.name,
-                  color: color,
-                  paid: paid,
-                  balance: balance,
-                  perPerson: _trip!.perPerson,
+        children: [
+          // Yangi ishtirokchi qo'shish tugmasi
+          GestureDetector(
+            onTap: _showAddMemberDialog,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTheme.primary.withOpacity(0.35),
+                  width: 1.5,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.person_add_rounded,
+                      color: AppTheme.primary, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Ishtirokchi qo\'shish',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
-          );
-        },
+          ),
+
+          if (_trip!.members.isEmpty)
+            _buildEmpty(
+              emoji: '👥',
+              title: 'Ishtirokchi yo\'q',
+              subtitle: 'Yuqoridagi tugma orqali qo\'shing',
+            )
+          else
+            ...List.generate(_trip!.members.length, (i) {
+              final member = _trip!.members[i];
+              final color =
+              AppTheme.memberColors[i % AppTheme.memberColors.length];
+              final balance = balances[member.id] ?? 0;
+              final paid = _trip!.expenses
+                  .where((e) => e.payerId == member.id)
+                  .fold(0.0, (s, e) => s + e.amount);
+
+              return AnimationConfiguration.staggeredList(
+                position: i + 1,
+                duration: const Duration(milliseconds: 350),
+                child: SlideAnimation(
+                  horizontalOffset: 40,
+                  child: FadeInAnimation(
+                    child: _MemberCard(
+                      name: member.name,
+                      color: color,
+                      paid: paid,
+                      balance: balance,
+                      perPerson: _trip!.perPerson,
+                      onEdit: () => _showEditMemberDialog(member),
+                      onDelete: () => _confirmDeleteMember(member),
+                    ),
+                  ),
+                ),
+              );
+            }),
+        ],
       ),
     );
   }
@@ -381,9 +586,9 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     required String title,
     required String subtitle,
   }) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.only(top: 60),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             width: 80,
@@ -518,6 +723,109 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   }
 }
 
+// ─── Member Dialog ────────────────────────────────────────────────────────────
+class _MemberDialog extends StatefulWidget {
+  final String title;
+  final String icon;
+  final TextEditingController controller;
+  final Future<void> Function(String) onSave;
+
+  const _MemberDialog({
+    required this.title,
+    required this.icon,
+    required this.controller,
+    required this.onSave,
+  });
+
+  @override
+  State<_MemberDialog> createState() => _MemberDialogState();
+}
+
+class _MemberDialogState extends State<_MemberDialog> {
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Row(
+        children: [
+          Text(widget.icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Text(
+            widget.title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textMain,
+            ),
+          ),
+        ],
+      ),
+      content: TextField(
+        controller: widget.controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        style: const TextStyle(fontSize: 14, color: AppTheme.textMain),
+        decoration: InputDecoration(
+          hintText: 'Ism kiriting...',
+          hintStyle: const TextStyle(color: AppTheme.textSecondary),
+          filled: true,
+          fillColor: const Color(0xFFF5F7F5),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+          ),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text(
+            'Bekor qilish',
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: _saving ? null : _submit,
+          child: _saving
+              ? const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+              : Text(
+            'Saqlash',
+            style: TextStyle(
+              color: AppTheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final name = widget.controller.text.trim();
+    if (name.isEmpty) return;
+    setState(() => _saving = true);
+    await widget.onSave(name);
+    if (mounted) Navigator.pop(context);
+  }
+}
+
+// ─── Stat Item ────────────────────────────────────────────────────────────────
 class _StatItem extends StatelessWidget {
   final String label;
   final String value;
@@ -557,16 +865,19 @@ class _StatItem extends StatelessWidget {
   }
 }
 
+// ─── Expense Card ─────────────────────────────────────────────────────────────
 class _ExpenseCard extends StatelessWidget {
   final Expense expense;
   final String payerName;
   final Color payerColor;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _ExpenseCard({
     required this.expense,
     required this.payerName,
     required this.payerColor,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -588,6 +899,7 @@ class _ExpenseCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Kategoriya icon
           Container(
             width: 46,
             height: 46,
@@ -603,6 +915,7 @@ class _ExpenseCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+          // Nomi va kim to'lagan
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -649,6 +962,7 @@ class _ExpenseCard extends StatelessWidget {
               ],
             ),
           ),
+          // Miqdor + tugmalar
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -660,22 +974,45 @@ class _ExpenseCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 4),
-              GestureDetector(
-                onTap: onDelete,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(25),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  // ✏️ Tahrirlash
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        color: AppTheme.primary,
+                        size: 14,
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: Colors.red,
-                    size: 15,
+                  const SizedBox(width: 6),
+                  // 🗑️ O'chirish
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red,
+                        size: 14,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -685,12 +1022,15 @@ class _ExpenseCard extends StatelessWidget {
   }
 }
 
+// ─── Member Card ──────────────────────────────────────────────────────────────
 class _MemberCard extends StatelessWidget {
   final String name;
   final Color color;
   final double paid;
   final double balance;
   final double perPerson;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _MemberCard({
     required this.name,
@@ -698,6 +1038,8 @@ class _MemberCard extends StatelessWidget {
     required this.paid,
     required this.balance,
     required this.perPerson,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -731,6 +1073,7 @@ class _MemberCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Avatar
           Container(
             width: 46,
             height: 46,
@@ -750,6 +1093,7 @@ class _MemberCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+          // Ism + to'lagan
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -773,6 +1117,7 @@ class _MemberCard extends StatelessWidget {
               ],
             ),
           ),
+          // Balance + tugmalar
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -792,13 +1137,45 @@ class _MemberCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Ulush: ${formatMoney(perPerson)}',
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 11,
-                ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  // ✏️ Tahrirlash
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        color: AppTheme.primary,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // 🗑️ O'chirish
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red,
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -808,6 +1185,7 @@ class _MemberCard extends StatelessWidget {
   }
 }
 
+// ─── Sliver Tab Bar Delegate ──────────────────────────────────────────────────
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
   final Color backgroundColor;
