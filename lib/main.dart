@@ -2,12 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'screens/main_shell.dart';
+import 'screens/auth_gate.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/storage_service.dart';
+import 'services/notification_service.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,14 +29,23 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
   await AuthService.instance.signInAnonymously();
   await StorageService.init();
   await initializeDateFormatting('uz', null);
 
   if (!kIsWeb) {
-    await FirebaseMessaging.instance.requestPermission();
-    await FirebaseMessaging.instance.subscribeToTopic('places');
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await NotificationService.instance.init();
   }
+
+  PaintingBinding.instance.imageCache.maximumSize = 200;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20;
 
   runApp(const MyApp());
 }
@@ -43,12 +59,12 @@ class MyApp extends StatelessWidget {
       title: 'NatureGo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const MainShell(),
+      home: const AuthGate(),
     );
   }
 }
+
 class AppTheme {
-  // NatureGo
   static const Color primary       = Color(0xFF2E7D32);
   static const Color primaryLight  = Color(0xFF43A047);
   static const Color primaryDark   = Color(0xFF1B5E20);
@@ -60,7 +76,6 @@ class AppTheme {
   static const Color border        = Color(0xFFD8E8D8);
   static const Color star          = Color(0xFFF59E0B);
 
-  // TripSplit
   static const Color cardBg        = Color(0xFFF7FAF7);
   static const Color textPrimary   = Color(0xFF1C2B1E);
   static const Color accentWarm    = Color(0xFFFF6B6B);

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../main.dart';
 import 'home_screen.dart';
-import 'favourites_screen.dart';
 import 'trip_list_screen.dart';
+import 'profile_screen.dart';
 import 'add_place_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -37,8 +37,8 @@ class _MainShellState extends State<MainShell> {
           index: _pageIndex(_currentIndex),
           children: const [
             HomeScreen(),
-            FavouritesScreen(),
             TripListScreen(),
+            ProfileScreen(),
           ],
         ),
         bottomNavigationBar: _buildBottomNavBar(),
@@ -78,13 +78,13 @@ class _MainShellState extends State<MainShell> {
               _buildNavAddButton(),
               _buildNavItem(
                 index: 2,
-                icon: Icons.favorite_rounded,
-                label: 'Sevimlilar',
+                icon: Icons.calculate_rounded,
+                label: 'Xarajatlar',
               ),
               _buildNavItem(
                 index: 3,
-                icon: Icons.calculate_rounded,
-                label: 'Xarajatlar',
+                icon: Icons.person_rounded,
+                label: 'Profil',
               ),
             ],
           ),

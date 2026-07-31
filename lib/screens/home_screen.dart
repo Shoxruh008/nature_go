@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../main.dart';
 import '../models/place_model.dart';
 import '../services/firebase_service.dart';
@@ -38,20 +39,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _searchFocused = false;
   final FocusNode _searchFocus = FocusNode();
 
+  Timer? _debounceTimer;
+
+  static const int _pageSize = 15;
+  int _visibleCount = _pageSize;
+  bool _hasMore = false;
+
+  bool _isOffline = false;
+  StreamSubscription? _connectivitySub;
+
   @override
   void initState() {
     super.initState();
     _headerAnim = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 700));
     _headerAnim.forward();
-    _scrollCtrl.addListener(_onScroll);
     _searchFocus.addListener(
         () => setState(() => _searchFocused = _searchFocus.hasFocus));
+    _initConnectivity();
     _initLocation();
     _listenPlaces();
   }
 
-  void _onScroll() {}
+  void _initConnectivity() {
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      final offline = results.every((r) => r == ConnectivityResult.none);
+      if (mounted && _isOffline != offline) {
+        setState(() => _isOffline = offline);
+      }
+    });
+  }
 
   bool _locationLoading = false;
 
@@ -88,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _networkError = false;
 
   void _listenPlaces() {
-    _placesSub = FirebaseService.instance.publishedPlaces().listen((places) {
+    _placesSub = FirebaseService.instance.publishedPlacesOffline().listen((places) {
       if (mounted) {
         setState(() {
           _allPlaces = places;
@@ -136,10 +153,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     _filtered = result;
+    _visibleCount = _pageSize;
+    _hasMore = _filtered.length > _visibleCount;
   }
 
   void _applyFilters() {
     setState(_applyFiltersInner);
+  }
+
+  void _loadMore() {
+    setState(() {
+      _visibleCount += _pageSize;
+      _hasMore = _filtered.length > _visibleCount;
+    });
+  }
+
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _searchQuery = value.trim();
+        _applyFilters();
+      }
+    });
   }
 
   @override
@@ -149,6 +185,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _scrollCtrl.dispose();
     _headerAnim.dispose();
     _searchFocus.dispose();
+    _debounceTimer?.cancel();
+    _connectivitySub?.cancel();
     super.dispose();
   }
 
@@ -167,8 +205,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _buildSeasonChips(),
                 _buildTypeChips(),
                 const SizedBox(height: 6),
+                if (_isOffline) _buildOfflineBanner(),
                 Expanded(child: _buildBody()),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFE082)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 16, color: Color(0xFFE65100)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Oflayn rejim — saqlangan ma\'lumotlar ko\'rsatilmoqda',
+              style: TextStyle(fontSize: 11, color: Color(0xFF795548), fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -262,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 GestureDetector(
                   onTap: () {
                     Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => DonatePage()));
+                        MaterialPageRoute(builder: (context) => const DonatePage()));
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -429,10 +493,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: TextField(
         controller: _searchCtrl,
         focusNode: _searchFocus,
-        onChanged: (v) {
-          _searchQuery = v.trim();
-          _applyFilters();
-        },
+        onChanged: _onSearchChanged,
         style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -449,7 +510,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     : AppTheme.textSecondary,
                 size: 19),
           ),
-          suffixIcon: _searchQuery.isNotEmpty
+          suffixIcon: _searchCtrl.text.isNotEmpty
               ? IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(3),
@@ -462,6 +523,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               onPressed: () {
                 _searchCtrl.clear();
+                _debounceTimer?.cancel();
                 _searchQuery = '';
                 _applyFilters();
               })
@@ -623,6 +685,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildBody() {
+    final displayCount = _filtered.length > _visibleCount
+        ? _visibleCount
+        : _filtered.length;
+
     return CustomScrollView(
       controller: _scrollCtrl,
       physics: const BouncingScrollPhysics(),
@@ -648,14 +714,58 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
         if (_loading)
           SliverFillRemaining(child: _buildLoader())
-        else if (_networkError)
+        else if (_networkError && _allPlaces.isEmpty)
           SliverFillRemaining(child: _buildNetworkError())
         else if (_filtered.isEmpty)
           SliverFillRemaining(child: _buildEmpty())
         else
-          _buildNearby(),
+          _buildNearby(displayCount),
+        if (_hasMore && !_loading)
+          SliverToBoxAdapter(child: _buildLoadMoreButton()),
         const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
       ],
+    );
+  }
+
+  Widget _buildLoadMoreButton() {
+    final remaining = _filtered.length - _visibleCount;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: GestureDetector(
+        onTap: _loadMore,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.expand_more_rounded,
+                  color: AppTheme.primary, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                'Ko\'proq ko\'rish (+${remaining > _pageSize ? _pageSize : remaining} joy)',
+                style: const TextStyle(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -706,22 +816,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    p.images.isNotEmpty
-                        ? (kIsWeb
-                        ? Image.network(p.images.first, fit: BoxFit.cover,
-                        loadingBuilder: (_, child, progress) =>
-                        progress == null ? child : Container(color: pt.bg),
-                        errorBuilder: (_, __, ___) => Container(
-                            color: pt.bg,
-                            child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40)))))
-                        : CachedNetworkImage(imageUrl: p.images.first, fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: pt.bg),
-                        errorWidget: (_, __, ___) => Container(
-                            color: pt.bg,
-                            child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40))))))
-                        : Container(
-                        color: pt.bg,
-                        child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40)))),
+                    _buildPlaceImage(p.images.isNotEmpty ? p.images.first : null, pt, BoxFit.cover),
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -777,7 +872,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildNearby() {
+  Widget _buildPlaceImage(String? imageUrl, PlaceType pt, BoxFit fit) {
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return Container(
+        color: pt.bg,
+        child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40))),
+      );
+    }
+    if (kIsWeb) {
+      return Image.network(
+        imageUrl,
+        fit: fit,
+        loadingBuilder: (_, child, progress) =>
+            progress == null ? child : Container(color: pt.bg),
+        errorBuilder: (_, __, ___) => Container(
+          color: pt.bg,
+          child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40))),
+        ),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: fit,
+      memCacheWidth: 400,
+      memCacheHeight: 400,
+      maxWidthDiskCache: 800,
+      maxHeightDiskCache: 800,
+      placeholder: (_, __) => Container(color: pt.bg),
+      errorWidget: (_, __, ___) => Container(
+        color: pt.bg,
+        child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 40))),
+      ),
+    );
+  }
+
+  Widget _buildNearby(int displayCount) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       sliver: SliverList(
@@ -804,18 +933,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
                         child: SizedBox(
                           width: 104, height: 104,
-                          child: p.images.isNotEmpty
-                              ? (kIsWeb
-                              ? Image.network(p.images.first, fit: BoxFit.cover,
-                              loadingBuilder: (_, child, progress) => progress == null ? child : Container(color: pt.bg),
-                              errorBuilder: (_, __, ___) => Container(color: pt.bg,
-                                  child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 26)))))
-                              : CachedNetworkImage(imageUrl: p.images.first, fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: pt.bg),
-                              errorWidget: (_, __, ___) => Container(color: pt.bg,
-                                  child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 26))))))
-                              : Container(color: pt.bg,
-                              child: Center(child: Text(pt.icon, style: const TextStyle(fontSize: 26)))),
+                          child: _buildPlaceImage(
+                            p.images.isNotEmpty ? p.images.first : null,
+                            pt,
+                            BoxFit.cover,
+                          ),
                         ),
                       ),
                       Expanded(
@@ -868,7 +990,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             );
           },
-          childCount: _filtered.length,
+          childCount: displayCount,
         ),
       ),
     );

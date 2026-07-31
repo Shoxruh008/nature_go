@@ -15,9 +15,12 @@ import '../main.dart';
 import '../models/place_model.dart';
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
+import '../services/saved_places_service.dart';
 import '../widgets/favourite_button.dart';
+import '../widgets/saved_toggle_button.dart';
 import 'comments_sheet.dart';
-import '../widgets/webmap/web_map_web.dart';
+import '../widgets/webmap/web_map_stub.dart'
+    if (dart.library.html) '../widgets/webmap/web_map_web.dart';
 
 class DetailScreen extends StatefulWidget {
   final String placeId;
@@ -68,6 +71,7 @@ class _DetailScreenState extends State<DetailScreen> {
     _imgCtrl.dispose();
     try {
       _webViewController?.loadRequest(Uri.parse('about:blank'));
+      _webViewController = null;
     } catch (_) {}
     super.dispose();
   }
@@ -153,21 +157,27 @@ class _DetailScreenState extends State<DetailScreen> {
         _videoTapped = false;
       });
     } else {
-      if (_webViewController == null) {
-        setState(() => _videoLoading = true);
-        final ctrl = VideoService.buildMobileController(videoId)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onPageFinished: (_) {
-                if (mounted) setState(() => _videoLoading = false);
-              },
-              onWebResourceError: (_) {
-                if (mounted) setState(() => _videoLoading = false);
-              },
-            ),
-          );
-        _webViewController = ctrl;
-      }
+      setState(() => _videoLoading = true);
+
+      _webViewController?.loadRequest(Uri.parse('about:blank'));
+      _webViewController = null;
+
+      final ctrl = VideoService.buildMobileController(videoId);
+      ctrl.setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (mounted) setState(() => _videoLoading = false);
+          },
+          onWebResourceError: (error) {
+            debugPrint('Video error: ${error.description}');
+            if (mounted) {
+              setState(() => _videoLoading = false);
+            }
+          },
+        ),
+      );
+      _webViewController = ctrl;
+
       setState(() {
         _showVideo = true;
         _videoTapped = false;
@@ -1006,6 +1016,32 @@ class _HeroImageSection extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       FavouriteButton(placeId: p.id, size: 40, dark: true),
+                      const SizedBox(width: 8),
+                      SavedToggleButton(
+                        service: VisitedPlacesService.instance,
+                        placeId: p.id,
+                        size: 40,
+                        dark: true,
+                        activeIcon: Icons.check_circle_rounded,
+                        inactiveIcon: Icons.check_circle_outline_rounded,
+                        activeColor: AppTheme.primary,
+                        activeBg: const Color(0xFFE8F5E9),
+                        confirmBeforeToggle: true,
+                        confirmSubject: 'borgan joylar',
+                      ),
+                      const SizedBox(width: 8),
+                      SavedToggleButton(
+                        service: WishlistService.instance,
+                        placeId: p.id,
+                        size: 40,
+                        dark: true,
+                        activeIcon: Icons.bookmark_rounded,
+                        inactiveIcon: Icons.bookmark_border_rounded,
+                        activeColor: const Color(0xFFFF6F00),
+                        activeBg: const Color(0xFFFFF3E0),
+                        confirmBeforeToggle: true,
+                        confirmSubject: "bormoqchi bo'lgan joylar",
+                      ),
                       if (onVideoTap != null) ...[
                         const SizedBox(width: 8),
                         GestureDetector(
@@ -1125,16 +1161,19 @@ class _InlineVideoSection extends StatelessWidget {
   }
 
   Widget _buildVideoWidget() {
-    if (videoLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-      );
-    }
     if (kIsWeb && iframeViewId != null) {
       return HtmlElementView(viewType: iframeViewId!);
     }
     if (!kIsWeb && webViewController != null) {
-      return WebViewWidget(controller: webViewController!);
+      return Stack(
+        children: [
+          WebViewWidget(controller: webViewController!),
+          if (videoLoading)
+            const Center(
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            ),
+        ],
+      );
     }
     return const Center(
       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),

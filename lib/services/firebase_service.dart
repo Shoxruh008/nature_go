@@ -34,13 +34,43 @@ class FirebaseService {
     });
   }
 
+  Stream<List<PlaceModel>> publishedPlacesOffline() {
+    return _db
+        .collection('places')
+        .where('isPublished', isEqualTo: true)
+        .snapshots(includeMetadataChanges: true)
+        .map((s) {
+      final places = s.docs.map(PlaceModel.fromFirestore).toList();
+      _placesCache = places;
+      for (final p in places) {
+        _placeCache[p.id] = p;
+      }
+      return places;
+    });
+  }
+
   Future<PlaceModel?> getPlace(String id) async {
     if (_placeCache.containsKey(id)) return _placeCache[id];
-    final doc = await _db.collection('places').doc(id).get();
-    if (!doc.exists) return null;
-    final place = PlaceModel.fromFirestore(doc);
-    _placeCache[place.id] = place;
-    return place;
+    try {
+      final doc = await _db.collection('places').doc(id).get(
+        const GetOptions(source: Source.cache),
+      );
+      if (doc.exists) {
+        final place = PlaceModel.fromFirestore(doc);
+        _placeCache[place.id] = place;
+        return place;
+      }
+    } catch (_) {}
+
+    try {
+      final doc = await _db.collection('places').doc(id).get();
+      if (!doc.exists) return null;
+      final place = PlaceModel.fromFirestore(doc);
+      _placeCache[place.id] = place;
+      return place;
+    } catch (_) {
+      return null;
+    }
   }
 
   void invalidateCache(String id) => _placeCache.remove(id);

@@ -8,25 +8,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:225052370906:android:368109089186ffa7fa42e3",
-        "android_client_info": {
-          "package_name": "com.example.nature_go"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCyjN7sk4mfDlgLC6DvNT3V2WGp8mGN_aU"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:225052370906:android:0371f1994f44acb4fa42e3",
         "android_client_info": {
           "package_name": "com.naturego.app"

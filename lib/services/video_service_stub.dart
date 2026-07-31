@@ -24,19 +24,29 @@ class VideoService {
       if (knownPaths.contains(parent) && last.length == 11) return last;
     }
 
+    if (segments.isNotEmpty && segments.last.length == 11) {
+      return segments.last;
+    }
+
     return null;
   }
 
   static String? getOrRegisterWebView(String videoId) => null;
 
   static WebViewController buildMobileController(String videoId) {
-    return WebViewController()
+    final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
+      ..enableZoom(false)
+      ..setUserAgent(
+        'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+      )
       ..loadRequest(Uri.parse(_embedUrl(videoId)));
+    return controller;
   }
 
   static String _embedUrl(String videoId) =>
       'https://www.youtube.com/embed/$videoId'
-          '?autoplay=1&playsinline=1&rel=0&modestbranding=1';
+      '?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1';
 }
