@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token.email == 'evolution2024team@gmail.com';
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidPlace() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 200
+          && d.region is string && d.region.size() > 0
+          && d.lat is number && d.lat >= -90 && d.lat <= 90
+          && d.lng is number && d.lng >= -180 && d.lng <= 180
+          && d.isPublished == false
+          && d.submittedBy == request.auth.uid;
+    }
+
+    function isValidReview() {
+      let d = request.resource.data;
+      return d.placeId is string && d.placeId.size() > 0
+          && d.rating is number && d.rating >= 1 && d.rating <= 5
+          && d.text is string && d.text.size() > 0 && d.text.size() <= 2000
+          && d.isPublished == false
+          && d.authorId == request.auth.uid;
+    }
+
+    function isValidUser() {
+      let d = request.resource.data;
+      return d.phone is string && d.phone.size() > 0
+          && d.password is string && d.password.size() >= 6;
+    }
+
+    function isValidSavedItem() {
+      let d = request.resource.data;
+      return d.placeId is string && d.placeId.size() > 0;
+    }
+
+    match /places/{placeId} {
+      allow read: if isAdmin() || resource.data.isPublished == true;
+      allow create: if isAuthenticated() && isValidPlace();
+      allow update, delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if isAdmin()
+                  || resource.data.isPublished == true
+                  || (isAuthenticated() && resource.data.authorId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidReview();
+      allow update, delete: if isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow create: if isAuthenticated() && request.auth.uid == uid && isValidUser();
+      allow update: if isAuthenticated() && request.auth.uid == uid;
+
+      match /{listName}/{placeId} {
+        allow read, delete: if isAuthenticated() && request.auth.uid == uid
+                            && listName in ['favourites', 'visited', 'wishlist'];
+        allow create, update: if isAuthenticated() && request.auth.uid == uid
+                            && listName in ['favourites', 'visited', 'wishlist']
+                            && isValidSavedItem();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
