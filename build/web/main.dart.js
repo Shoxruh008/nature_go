@@ -127061,7 +127061,7 @@ case 6:case 1:return A.v(q,r)
 case 2:return A.u(o.at(-1),r)}})
 return A.w($async$w8,r)},
 I(a){var s,r,q,p,o,n,m,l=this,k=null,j="Ro'yxatdan o'tish",i=A.fm(k,A.a5(k,k,B.k,k,k,new A.a1(A.K(20,B.h.l()>>>16&255,B.h.l()>>>8&255,B.h.l()&255),k,k,k,k,k,B.ao),k,130,k,k,k,k,130),k,k,k,-30,-30,k),h=A.fm(-46,A.a5(k,k,B.k,k,k,new A.a1(A.K(18,B.h.l()>>>16&255,B.h.l()>>>8&255,B.h.l()&255),k,k,k,k,k,B.ao),k,150,k,k,k,k,150),k,k,-30,k,k,k),g=t.V,f=A.b([new A.bl(0,B.J,A.K(38,B.i.l()>>>16&255,B.i.l()>>>8&255,B.i.l()&255),B.rE,16)],g),e=t.p
-f=A.lY(B.uJ,A.a5(k,A.er(B.P,A.b([i,h,A.aS(A.b([A.a5(k,new A.Ws(A.bcZ("assets/c1.png",B.dS,k,k),k),B.k,k,k,new A.a1(B.h,k,k,k,f,k,B.ao),k,88,k,B.wK,k,k,88),B.aT,B.ax7,B.cB,A.U("O'zbekiston tabiati siz bilan",k,k,k,k,k,A.bT(k,k,A.K(217,B.h.l()>>>16&255,B.h.l()>>>8&255,B.h.l()&255),k,k,k,k,k,k,k,k,12.5,k,k,B.aC,k,k,!0,k,k,k,k,k,k,k,k),k,k,k)],e),B.m,B.j,B.a1)],e),B.A,B.aU,k),B.k,k,k,B.Sv,k,k,k,B.XA,k,k,1/0))
+f=A.lY(B.uJ,A.a5(k,A.er(B.P,A.b([i,h,A.aS(A.b([A.a5(k,new A.Ws(A.bcZ("assets/logo.png",B.dS,k,k),k),B.k,k,k,new A.a1(B.h,k,k,k,f,k,B.ao),k,88,k,B.wK,k,k,88),B.aT,B.ax7,B.cB,A.U("O'zbekiston tabiati siz bilan",k,k,k,k,k,A.bT(k,k,A.K(217,B.h.l()>>>16&255,B.h.l()>>>8&255,B.h.l()&255),k,k,k,k,k,k,k,k,12.5,k,k,B.aC,k,k,!0,k,k,k,k,k,k,k,k),k,k,k)],e),B.m,B.j,B.a1)],e),B.A,B.aU,k),B.k,k,k,B.Sv,k,k,k,B.XA,k,k,1/0))
 h=A.a_(14)
 i=l.d?B.fQ:B.iC
 h=A.a5(k,A.er(B.aP,A.b([new A.G3(i,A.bcA(B.P,A.a5(k,k,B.k,k,k,new A.a1(B.h,k,k,A.a_(11),A.b([new A.bl(0,B.J,A.K(20,B.i.l()>>>16&255,B.i.l()>>>8&255,B.i.l()&255),B.aF,8)],g),k,B.p),k,k,k,k,k,k,k),k,0.5),B.cL,B.wr,k,k),A.at(A.b([A.bM(l.YP(j,!0),1),A.bM(l.YP("Kirish",!1),1)],e),B.m,k,B.j,B.l,0)],e),B.A,B.aU,k),B.k,k,k,new A.a1(B.oU,k,k,h,k,k,B.p),k,48,k,B.pD,k,k,k)

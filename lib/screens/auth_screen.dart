@@ -213,7 +213,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ],
                   ),
                   child: ClipOval(
-                    child: Image.asset('assets/c1.png', fit: BoxFit.cover),
+                    child: Image.asset('assets/logo.png', fit: BoxFit.cover),
                   ),
                 ),
                 const SizedBox(height: 14),
