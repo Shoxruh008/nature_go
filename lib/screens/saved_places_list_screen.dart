@@ -26,6 +26,15 @@ class SavedPlacesListScreen extends StatefulWidget {
   /// `true` bo'lsa, ro'yxatdan olib tashlashdan oldin tasdiqlash oynasi chiqadi.
   final bool confirmBeforeRemove;
 
+  /// Berilsa, joyni shu ro'yxatdan boshqasiga "ko'chirish" imkoniyati
+  /// qo'shiladi (masalan, bormoqchi bo'lganlardan borganlarga).
+  final SavedPlacesService? moveToService;
+  final String? moveToLabel;
+  final IconData? moveToIcon;
+  final Color? moveToColor;
+  final Color? moveToBg;
+  final String? moveToSuffix;
+
   const SavedPlacesListScreen({
     super.key,
     required this.title,
@@ -38,6 +47,12 @@ class SavedPlacesListScreen extends StatefulWidget {
     required this.emptyMessage,
     required this.removedSuffix,
     this.confirmBeforeRemove = false,
+    this.moveToService,
+    this.moveToLabel,
+    this.moveToIcon,
+    this.moveToColor,
+    this.moveToBg,
+    this.moveToSuffix,
   });
 
   @override
@@ -115,6 +130,40 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
     if (confirmed) await _doRemove(place);
   }
 
+  Future<bool> _confirmMove(PlaceModel place) async {
+    return showConfirmDialog(
+      context,
+      title: '${widget.moveToLabel} tasdiqlang',
+      message:
+          "\"${place.name}\" ${widget.moveToLabel!.toLowerCase()}, u ro'yxatdan olib tashlanadi. Davom etilsinmi?",
+      confirmLabel: widget.moveToLabel!,
+    );
+  }
+
+  Future<void> _doMove(PlaceModel place) async {
+    HapticFeedback.mediumImpact();
+    await widget.moveToService!.add(place.id);
+    await widget.service.remove(place.id);
+    if (!mounted) return;
+    setState(() => _places.removeWhere((p) => p.id == place.id));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${place.name} ${widget.moveToSuffix}',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        backgroundColor: widget.moveToColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _moveWithConfirm(PlaceModel place) async {
+    final confirmed = await _confirmMove(place);
+    if (confirmed) await _doMove(place);
+  }
+
   void _openDetail(PlaceModel p) {
     Navigator.push(
       context,
@@ -178,33 +227,75 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
 
   Widget _buildCard(PlaceModel p) {
     final pt = p.placeType;
+    final canMove = widget.moveToService != null;
+
+    final removeBackground = Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEF4444),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.close_rounded, color: Colors.white, size: 22),
+          SizedBox(height: 4),
+          Text('Olib\ntashlash',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+
+    final moveBackground = canMove
+        ? Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: widget.moveToColor,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(widget.moveToIcon, color: Colors.white, size: 22),
+                const SizedBox(height: 4),
+                Text(widget.moveToLabel ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700)),
+              ],
+            ),
+          )
+        : null;
+
     return Dismissible(
       key: ValueKey(p.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEF4444),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.close_rounded, color: Colors.white, size: 22),
-            SizedBox(height: 4),
-            Text('Olib\ntashlash',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700)),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) => _confirmRemoval(p),
-      onDismissed: (_) => _doRemove(p),
+      direction:
+          canMove ? DismissDirection.horizontal : DismissDirection.endToStart,
+      background: canMove ? moveBackground : removeBackground,
+      secondaryBackground: canMove ? removeBackground : null,
+      confirmDismiss: (direction) {
+        if (canMove && direction == DismissDirection.startToEnd) {
+          return _confirmMove(p);
+        }
+        return _confirmRemoval(p);
+      },
+      onDismissed: (direction) {
+        if (canMove && direction == DismissDirection.startToEnd) {
+          _doMove(p);
+        } else {
+          _doRemove(p);
+        }
+      },
       child: Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: GestureDetector(
@@ -320,18 +411,39 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
                 ),
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
-                  child: GestureDetector(
-                    onTap: () => _removeWithConfirm(p),
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: widget.activeBg,
-                        borderRadius: BorderRadius.circular(20),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (canMove) ...[
+                        GestureDetector(
+                          onTap: () => _moveWithConfirm(p),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: widget.moveToBg,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(widget.moveToIcon,
+                                size: 16, color: widget.moveToColor),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      GestureDetector(
+                        onTap: () => _removeWithConfirm(p),
+                        child: Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: widget.activeBg,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(widget.activeIcon,
+                              size: 16, color: widget.activeColor),
+                        ),
                       ),
-                      child: Icon(widget.activeIcon,
-                          size: 16, color: widget.activeColor),
-                    ),
+                    ],
                   ),
                 ),
               ],

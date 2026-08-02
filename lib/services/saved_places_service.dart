@@ -106,6 +106,18 @@ class SavedPlacesService extends ChangeNotifier {
         .delete();
   }
 
+  /// Toggle'dan farqli o'laroq, allaqachon saqlangan bo'lsa ham xavfsiz
+  /// ravishda qo'shadi (masalan, bir ro'yxatdan ikkinchisiga ko'chirishda).
+  Future<void> add(String placeId) async {
+    await _ensureLoaded();
+    final uid = _boundUid;
+    if (uid == null) return;
+    await _db.collection('users').doc(uid).collection(collectionName).doc(placeId).set({
+      'placeId': placeId,
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// Ilova yangilanishidan oldingi eski (SharedPreferences) lokal ro'yxatni
   /// birinchi muvaffaqiyatli auth'dan so'ng joriy akkountga ko'chiradi.
   Future<void> migrateLegacyLocalIds(String prefsKey) async {

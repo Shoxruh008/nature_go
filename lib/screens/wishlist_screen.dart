@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../main.dart';
 import '../services/saved_places_service.dart';
 import 'saved_places_list_screen.dart';
 
@@ -20,6 +21,12 @@ class WishlistScreen extends StatelessWidget {
           "Bormoqchi bo'lgan joylaringizni belgilash\nuchun 🔖 tugmasini bosing",
       removedSuffix: "ro'yxatdan olib tashlandi",
       confirmBeforeRemove: true,
+      moveToService: VisitedPlacesService.instance,
+      moveToLabel: 'Bordim',
+      moveToIcon: Icons.check_circle_rounded,
+      moveToColor: AppTheme.primary,
+      moveToBg: const Color(0xFFE8F5E9),
+      moveToSuffix: "borgan joylarga ko'chirildi",
     );
   }
 }
