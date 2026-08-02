@@ -39,6 +39,7 @@ void main() async {
   await StorageService.init();
   await initializeDateFormatting('uz', null);
 
+
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     await NotificationService.instance.init();
