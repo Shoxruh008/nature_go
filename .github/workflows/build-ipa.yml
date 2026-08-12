@@ -18,6 +18,9 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Swift Package Manager'ni o'chirish
+        run: flutter config --no-enable-swift-package-manager
+
       - name: Paketlarni olish
         run: flutter pub get
 
