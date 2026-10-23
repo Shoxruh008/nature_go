@@ -55,7 +55,7 @@ jobs:
             "version": 3,
             "routes": [
               {
-                "src": "/(|index\.html|flutter_bootstrap\.js|flutter_service_worker\.js|version\.json|manifest\.json)",
+                "src": "/(|index[.]html|flutter_bootstrap[.]js|flutter_service_worker[.]js|version[.]json|manifest[.]json)",
                 "headers": { "cache-control": "no-cache" },
                 "continue": true
               },
