@@ -38,6 +38,8 @@
     <string>NatureGo joy rasmlari tanlash uchun galereyangizga kiradi.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>NatureGo rasmlarni galereyaga saqlashi mumkin.</string>
+    <key>YandexMapKitApiKey</key>
+    <string>$(YANDEX_MAPKIT_API_KEY)</string>
     <key>LSApplicationQueriesSchemes</key>
     <array>
         <string>yandexmaps</string>

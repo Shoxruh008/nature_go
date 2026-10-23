@@ -21,6 +21,7 @@ class VisitedPlacesScreen extends StatelessWidget {
           "Joyga tashrif buyurganingizda uni\nbelgilash uchun ✅ tugmasini bosing",
       removedSuffix: "borgan joylar ro'yxatidan olib tashlandi",
       confirmBeforeRemove: true,
+      showDate: true,
     );
   }
 }

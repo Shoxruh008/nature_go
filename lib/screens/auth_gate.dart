@@ -6,30 +6,42 @@ import '../services/auth_service.dart';
 import 'auth_screen.dart';
 import 'main_shell.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: AuthService.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: AppTheme.bg,
-            body: Center(
-              child: CircularProgressIndicator(
-                color: AppTheme.primary,
-                strokeWidth: 2.5,
-              ),
-            ),
-          );
-        }
+  State<AuthGate> createState() => _AuthGateState();
+}
 
-        final user = snapshot.data;
-        final isRegistered = user != null && !user.isAnonymous;
-        return isRegistered ? const MainShell() : const AuthScreen();
-      },
+class _AuthGateState extends State<AuthGate> {
+  // Har build'da yangi stream yaratilib, spinner yonib qolmasligi uchun saqlanadi.
+  late final Stream<User?> _userStream = AuthService.instance.userChanges();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: AuthService.instance.busy,
+      builder: (context, busy, _) => StreamBuilder<User?>(
+        stream: _userStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              backgroundColor: AppTheme.bg,
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.primary,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            );
+          }
+
+          // Ro'yxatdan o'tish/kirish tugamaguncha AuthScreen'da qolamiz.
+          final user = snapshot.data;
+          final isRegistered = !busy && user != null && !user.isAnonymous;
+          return isRegistered ? const MainShell() : const AuthScreen();
+        },
+      ),
     );
   }
 }

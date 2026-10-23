@@ -6,7 +6,7 @@ class NotificationService {
   static NotificationService get instance => _instance;
   NotificationService._();
 
-  final _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
 
   Future<void> init() async {
     final settings = await _messaging.requestPermission(
@@ -16,25 +16,31 @@ class NotificationService {
       provisional: false,
     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus == AuthorizationStatus.provisional) {
-      await _messaging.subscribeToTopic('places');
+    if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+        settings.authorizationStatus != AuthorizationStatus.provisional) {
+      return;
+    }
 
+    // Token yoki topic xatosi (masalan, iOS'da APNs sozlanmagan) qolgan
+    // tinglovchilarni ro'yxatdan o'tkazishga to'sqinlik qilmasin.
+    try {
+      await _messaging.subscribeToTopic('places');
       final token = await _messaging.getToken();
       debugPrint('FCM Token: $token');
+    } catch (e) {
+      debugPrint('FCM token/topic olinmadi: $e');
+    }
 
-      _messaging.onTokenRefresh.listen((newToken) {
-        debugPrint('FCM Token refreshed: $newToken');
-      });
+    _messaging.onTokenRefresh.listen((newToken) {
+      debugPrint('FCM Token refreshed: $newToken');
+    });
 
-      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
-
-      final initialMessage = await _messaging.getInitialMessage();
-      if (initialMessage != null) {
-        _handleMessageOpenedApp(initialMessage);
-      }
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleMessageOpenedApp(initialMessage);
     }
   }
 

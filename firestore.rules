@@ -2,9 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // email_verified shart: Email/Password orqali boshqa odam admin emailini
+    // tasdiqlamasdan ro'yxatdan o'tib, admin huquqini olib qo'ymasligi uchun.
     function isAdmin() {
       return request.auth != null &&
-             request.auth.token.email == 'evolution2024team@gmail.com';
+             request.auth.token.email == 'evolution2024team@gmail.com' &&
+             request.auth.token.email_verified == true;
     }
 
     function isAuthenticated() {
@@ -38,7 +41,8 @@ service cloud.firestore {
 
     function isValidSavedItem() {
       let d = request.resource.data;
-      return d.placeId is string && d.placeId.size() > 0;
+      return d.placeId is string && d.placeId.size() > 0
+          && (!('visitedAt' in d) || d.visitedAt is timestamp);
     }
 
     match /places/{placeId} {

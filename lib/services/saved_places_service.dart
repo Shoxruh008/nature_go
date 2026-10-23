@@ -11,20 +11,44 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// instansiyasi bilan ifodalanadi.
 class SavedPlacesService extends ChangeNotifier {
   final String collectionName;
-  SavedPlacesService(this.collectionName);
+  final FirebaseFirestore? _dbOverride;
+  final FirebaseAuth? _authOverride;
 
-  final _db = FirebaseFirestore.instance;
+  /// [db] va [auth] faqat testlarda almashtirish uchun.
+  SavedPlacesService(
+    this.collectionName, {
+    FirebaseFirestore? db,
+    FirebaseAuth? auth,
+  })  : _dbOverride = db,
+        _authOverride = auth;
+
+  FirebaseFirestore get _db => _dbOverride ?? FirebaseFirestore.instance;
+  FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
+
+  /// Oflayn rejimda `set()/delete()` serverdan tasdiq kelguncha tugamaydi.
+  /// Lokal yozuv esa darhol qo'llanadi va ulanganda yuboriladi, shuning uchun
+  /// shu vaqtdan keyin kutishni to'xtatamiz.
+  static const _writeTimeout = Duration(seconds: 4);
+  static const _loadTimeout = Duration(seconds: 8);
 
   StreamSubscription<User?>? _authSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _itemsSub;
   String? _boundUid;
 
   Set<String> _items = {};
+
+  /// Joy ID -> saqlangan sana (`visitedAt`, bo'lmasa `addedAt`).
+  Map<String, DateTime> _dates = {};
   Completer<void> _ready = Completer<void>();
+  bool _loadFailed = false;
+
+  /// Oxirgi yuklash urinishi xato bilan tugagan bo'lsa `true`.
+  bool get loadFailed => _loadFailed;
 
   void _ensureBound() {
-    _authSub ??= FirebaseAuth.instance.authStateChanges().listen(_onAuthChanged);
-    _onAuthChanged(FirebaseAuth.instance.currentUser);
+    // `userChanges`: anonim akkaunt haqiqiyga link qilinganda ham ishlaydi.
+    _authSub ??= _auth.userChanges().listen(_onAuthChanged);
+    _onAuthChanged(_auth.currentUser);
   }
 
   void _onAuthChanged(User? user) {
@@ -36,6 +60,8 @@ class SavedPlacesService extends ChangeNotifier {
     _itemsSub?.cancel();
     _itemsSub = null;
     _items = {};
+    _dates = {};
+    _loadFailed = false;
     if (!_ready.isCompleted) _ready.complete();
     _ready = Completer<void>();
 
@@ -43,14 +69,31 @@ class SavedPlacesService extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    _subscribe(newUid);
+  }
 
+  void _subscribe(String uid) {
     _itemsSub = _db
         .collection('users')
-        .doc(newUid)
+        .doc(uid)
         .collection(collectionName)
         .snapshots()
         .listen((snap) {
       _items = snap.docs.map((d) => d.id).toSet();
+      _dates = {
+        for (final d in snap.docs)
+          if (_readDate(d.data()) != null) d.id: _readDate(d.data())!,
+      };
+      _loadFailed = false;
+      if (!_ready.isCompleted) _ready.complete();
+      notifyListeners();
+    }, onError: (Object e) {
+      // Masalan, rules ruxsat bermasa. Oqim shu yerda tugaydi, shuning uchun
+      // keyingi so'rovda qayta ulanamiz (`_ensureLoaded`).
+      debugPrint('$collectionName ro\'yxatini o\'qib bo\'lmadi: $e');
+      _itemsSub?.cancel();
+      _itemsSub = null;
+      _loadFailed = true;
       if (!_ready.isCompleted) _ready.complete();
       notifyListeners();
     });
@@ -58,8 +101,35 @@ class SavedPlacesService extends ChangeNotifier {
 
   Future<void> _ensureLoaded() async {
     _ensureBound();
-    if (_boundUid == null) return;
-    await _ready.future;
+    final uid = _boundUid;
+    if (uid == null) return;
+    if (_itemsSub == null) {
+      _ready = Completer<void>();
+      _subscribe(uid);
+    }
+    await _ready.future.timeout(_loadTimeout, onTimeout: () {});
+  }
+
+  DocumentReference<Map<String, dynamic>> _doc(String uid, String placeId) =>
+      _db.collection('users').doc(uid).collection(collectionName).doc(placeId);
+
+  Map<String, dynamic> _payload(String placeId, {DateTime? visitedAt}) => {
+        'placeId': placeId,
+        'addedAt': FieldValue.serverTimestamp(),
+        if (visitedAt != null) 'visitedAt': Timestamp.fromDate(visitedAt),
+      };
+
+  static DateTime? _readDate(Map<String, dynamic> data) {
+    final value = data['visitedAt'] ?? data['addedAt'];
+    return value is Timestamp ? value.toDate() : null;
+  }
+
+  Future<void> _commit(Future<void> write) async {
+    try {
+      await write.timeout(_writeTimeout);
+    } on TimeoutException {
+      // Oflayn: yozuv lokal saqlandi, ulanganda serverga yuboriladi.
+    }
   }
 
   Future<Set<String>> getAll() async {
@@ -74,54 +144,61 @@ class SavedPlacesService extends ChangeNotifier {
 
   bool isSavedSync(String placeId) => _items.contains(placeId);
 
-  Future<bool> toggle(String placeId) async {
+  /// Joy shu ro'yxatga qo'shilgan (borgan joylar uchun: tashrif qilingan) sana.
+  DateTime? dateOf(String placeId) => _dates[placeId];
+
+  /// [visitedAt] faqat qo'shishda ishlatiladi (masalan, borgan joylar uchun).
+  Future<bool> toggle(String placeId, {DateTime? visitedAt}) async {
     await _ensureLoaded();
     final uid = _boundUid;
     if (uid == null) return false;
 
     final wasSaved = _items.contains(placeId);
-    final docRef =
-        _db.collection('users').doc(uid).collection(collectionName).doc(placeId);
-
-    if (wasSaved) {
-      await docRef.delete();
-    } else {
-      await docRef.set({
-        'placeId': placeId,
-        'addedAt': FieldValue.serverTimestamp(),
-      });
-    }
+    final ref = _doc(uid, placeId);
+    await _commit(wasSaved
+        ? ref.delete()
+        : ref.set(_payload(placeId, visitedAt: visitedAt)));
     return !wasSaved;
+  }
+
+  /// Saqlangan joyning sanasini o'zgartiradi (tashrif sanasini tahrirlash).
+  Future<void> setVisitDate(String placeId, DateTime visitedAt) async {
+    await _ensureLoaded();
+    final uid = _boundUid;
+    if (uid == null) return;
+    await _commit(_doc(uid, placeId)
+        .update({'visitedAt': Timestamp.fromDate(visitedAt)}));
   }
 
   Future<void> remove(String placeId) async {
     await _ensureLoaded();
     final uid = _boundUid;
     if (uid == null) return;
-    await _db
-        .collection('users')
-        .doc(uid)
-        .collection(collectionName)
-        .doc(placeId)
-        .delete();
+    await _commit(_doc(uid, placeId).delete());
   }
 
-  /// Toggle'dan farqli o'laroq, allaqachon saqlangan bo'lsa ham xavfsiz
-  /// ravishda qo'shadi (masalan, bir ro'yxatdan ikkinchisiga ko'chirishda).
-  Future<void> add(String placeId) async {
+  /// Joyni shu ro'yxatdan [target] ro'yxatiga bitta batch'da ko'chiradi:
+  /// ikkalasi birga bajariladi yoki hech biri.
+  Future<void> moveTo(
+    SavedPlacesService target,
+    String placeId, {
+    DateTime? visitedAt,
+  }) async {
     await _ensureLoaded();
     final uid = _boundUid;
     if (uid == null) return;
-    await _db.collection('users').doc(uid).collection(collectionName).doc(placeId).set({
-      'placeId': placeId,
-      'addedAt': FieldValue.serverTimestamp(),
-    });
+
+    final batch = _db.batch()
+      ..delete(_doc(uid, placeId))
+      ..set(target._doc(uid, placeId),
+          target._payload(placeId, visitedAt: visitedAt));
+    await _commit(batch.commit());
   }
 
   /// Ilova yangilanishidan oldingi eski (SharedPreferences) lokal ro'yxatni
   /// birinchi muvaffaqiyatli auth'dan so'ng joriy akkountga ko'chiradi.
   Future<void> migrateLegacyLocalIds(String prefsKey) async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _auth.currentUser;
     if (user == null || user.isAnonymous) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -130,14 +207,10 @@ class SavedPlacesService extends ChangeNotifier {
 
     try {
       final batch = _db.batch();
-      final col = _db.collection('users').doc(user.uid).collection(collectionName);
       for (final id in ids) {
-        batch.set(col.doc(id), {
-          'placeId': id,
-          'addedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        batch.set(_doc(user.uid, id), _payload(id), SetOptions(merge: true));
       }
-      await batch.commit();
+      await _commit(batch.commit());
       await prefs.remove(prefsKey);
     } catch (e) {
       debugPrint('$collectionName ro\'yxatini ko\'chirishda xatolik: $e');

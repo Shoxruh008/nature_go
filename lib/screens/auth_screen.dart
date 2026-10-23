@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../main.dart';
 import '../services/auth_service.dart';
+import '../utils/phone_utils.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -319,7 +320,7 @@ class _AuthScreenState extends State<AuthScreen> {
       inputFormatters: [
         FilteringTextInputFormatter.digitsOnly,
         LengthLimitingTextInputFormatter(9),
-        _PhoneGroupFormatter(),
+        PhoneGroupFormatter(),
       ],
       decoration: const InputDecoration(
         labelText: 'Telefon raqam',
@@ -427,27 +428,6 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// "90 123 45 67" ko'rinishida guruhlab yozadi (2-3-2-2).
-class _PhoneGroupFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final buffer = StringBuffer();
-    for (int i = 0; i < digits.length; i++) {
-      buffer.write(digits[i]);
-      if (i == 1 || i == 4 || i == 6) {
-        if (i != digits.length - 1) buffer.write(' ');
-      }
-    }
-    final text = buffer.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

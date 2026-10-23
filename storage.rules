@@ -1,0 +1,48 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // email_verified shart: firestore.rules bilan bir xil.
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token.email == 'evolution2024team@gmail.com' &&
+             request.auth.token.email_verified == true;
+    }
+
+    function isSmallImage() {
+      return request.resource.contentType.matches('image/.*')
+          && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Joy rasmlari (add_place_screen)
+    match /places/{file} {
+      allow read: if true;
+      allow create: if isSignedIn() && isSmallImage();
+      allow update, delete: if isAdmin();
+    }
+
+    // Sharh rasmlari. Sharh yozilmay qolsa, yuklangan rasmlarni ilova
+    // o'zi o'chirishi uchun delete ruxsat etilgan (reviewId tasodifiy).
+    match /reviews/{reviewId}/{file} {
+      allow read: if true;
+      allow create: if isSignedIn() && isSmallImage();
+      allow delete: if isSignedIn();
+      allow update: if isAdmin();
+    }
+
+    // Marshrut fayllari (GPX/KML/GeoJSON)
+    match /routes/{file} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.size < 20 * 1024 * 1024;
+      allow update, delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

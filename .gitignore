@@ -30,8 +30,7 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/*
-!/build/web/
+/build/
 /coverage/
 
 # Symbolication related
@@ -51,3 +50,7 @@ android/key.properties
 **/*.keystore
 
 .vercel
+
+# Yandex MapKit kaliti (CI'da secret orqali beriladi)
+android/yandex.properties
+ios/Flutter/Secrets.xcconfig

@@ -1,0 +1,68 @@
+name: Deploy Web (Vercel)
+
+# Veb-ilova endi gitda saqlanmaydi: har push'da CI o'zi yig'adi va deploy qiladi.
+# Kerak: GitHub repo Settings -> Secrets -> Actions -> VERCEL_TOKEN
+# (Vercel -> Account Settings -> Tokens). Vercel loyihasida GitHub avto-deploy
+# o'chirilgan bo'lishi kerak (Settings -> Git -> Disconnect).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: team_pBnw9EiOLSBX42R7ctCyWur4
+  VERCEL_PROJECT_ID: prj_y2rnvWvrWbe83lo8oTChKUzaA52P
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v4
+
+      - name: Flutter o'rnatish
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: 'stable'
+          cache: true
+
+      - name: Paketlarni olish
+        run: flutter pub get
+
+      - name: Tahlil (faqat xatolar to'xtatadi)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Testlar
+        run: flutter test
+
+      - name: Veb build
+        run: flutter build web --release
+
+      - name: Vercel uchun tayyorlash (Build Output API)
+        run: |
+          mkdir -p .vercel/output/static
+          cp -r build/web/. .vercel/output/static/
+          # Service worker va kirish fayllari keshlanmasin: yangi versiya
+          # foydalanuvchida darhol ko'rinadi.
+          cat > .vercel/output/config.json <<'JSON'
+          {
+            "version": 3,
+            "routes": [
+              {
+                "src": "/(|index\.html|flutter_bootstrap\.js|flutter_service_worker\.js|version\.json|manifest\.json)",
+                "headers": { "cache-control": "no-cache" },
+                "continue": true
+              },
+              { "handle": "filesystem" }
+            ]
+          }
+          JSON
+
+      - name: Vercel'ga deploy
+        run: npx --yes vercel@latest deploy --prebuilt --prod --token "${{ secrets.VERCEL_TOKEN }}"

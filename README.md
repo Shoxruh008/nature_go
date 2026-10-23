@@ -128,7 +128,9 @@ lib/
 | `baseRating` | double | Asosiy reyting |
 | `isPublished` | bool | Admin tasdiqlagan |
 | `routeFileUrl` | String? | **GPX/KML/GeoJSON marshrut fayli** |
-| `videoUrl` | String? | Video |
+| `videoUrl` | String? | Video (YouTube havolasi) |
+| `videoAuthorUrl` | String? | **Video muallifi havolasi** (admin kiritadi; video ostida bosiladigan havola bo'lib chiqadi, faqat http/https) |
+| `videoAuthorName` | String? | Muallifning ko'rinadigan nomi (ixtiyoriy; bo'lmasa havoladan olinadi, masalan `@kanal`) |
 | `phone` | String? | **Aloqa raqami** |
 | `trekDifficulty` | String? | **Qiyinlik darajasi** |
 | `trekLength` | String? | **Marshrut uzunligi** |
@@ -168,10 +170,26 @@ flutter pub get
 # 3. Firebase sozlash
 flutterfire configure
 
-# 4. Ishga tushirish
+# 4. Yandex MapKit kaliti (gitda saqlanmaydi)
+cp android/yandex.properties.example android/yandex.properties          # va kalitni yozing
+cp ios/Flutter/Secrets.xcconfig.example ios/Flutter/Secrets.xcconfig    # (iOS uchun)
+
+# 5. Ishga tushirish
 flutter run              # mobil
 flutter run -d chrome   # veb
+
+# 6. Testlar
+flutter test
 ```
+
+### Deploy
+
+- **Veb (Vercel)** — `.github/workflows/deploy-web.yml` har `master` push'ida testlarni ishga tushiradi,
+  `flutter build web --release` qiladi va Vercel'ga yuboradi. `build/` papkasi gitda saqlanmaydi.
+  Kerak: GitHub secret `VERCEL_TOKEN`; Vercel loyihasida GitHub avto-deploy o'chirilgan bo'lishi kerak.
+- **iOS** — `.github/workflows/build-ipa.yml` (imzosiz IPA). Kerak: secret `YANDEX_MAPKIT_API_KEY`
+  (Codemagic'da shu nomli environment variable).
+- **Firebase qoidalari** — `firebase deploy --only firestore:rules,storage --project nature-go-c188e`
 
 ---
 
@@ -181,7 +199,7 @@ flutter run -d chrome   # veb
 |---|---|
 | `cloud_firestore` | Joy ma'lumotlari real-vaqt oqimi |
 | `firebase_storage` | Rasm va marshrut fayllari saqlash |
-| `firebase_auth` | Anonim foydalanuvchi sessiyasi |
+| `firebase_auth` | Telefon raqam + parol (ichki email orqali) bilan kirish |
 | `firebase_messaging` | Yangi joy haqida push xabar |
 | `geolocator` | GPS joylashuv va masofa hisoblash |
 | `geocoding` | Koordinatdan shahar/viloyat nomi |
@@ -197,7 +215,7 @@ flutter run -d chrome   # veb
 - **Real-vaqt yangilanish** — Firestore `Stream` orqali joylar avtomatik yangilanadi
 - **Ikki darajali kesh** — `Map<String, PlaceModel>` (ID bo'yicha) + `List<PlaceModel>` (umumiy) — ortiqcha so'rovlarni kamaytiradi
 - **Cross-platform video/xarita** — veb va mobil uchun alohida implementatsiya (stub pattern)
-- **Anonim autentifikatsiya** — ro'yxatdan o'tmasdan ishlaydi, UID orqali kuzatiladi
+- **Telefon + parol autentifikatsiyasi** — telefon `998XXXXXXXXX@naturego.uz` ichki emailiga aylantirilib Firebase Email/Password orqali ishlaydi; eski anonim akkaunt ro'yxatdan o'tganda `link` qilinadi (UID saqlanadi)
 
 ---
 

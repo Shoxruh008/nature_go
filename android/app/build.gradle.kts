@@ -11,6 +11,21 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Yandex MapKit kaliti gitda saqlanmaydi: avval YANDEX_MAPKIT_API_KEY muhit
+// o'zgaruvchisi (CI), so'ng android/yandex.properties (lokal) tekshiriladi.
+val yandexProperties = Properties()
+val yandexPropertiesFile = rootProject.file("yandex.properties")
+if (yandexPropertiesFile.exists()) {
+    yandexProperties.load(FileInputStream(yandexPropertiesFile))
+}
+val yandexMapKitApiKey: String =
+    System.getenv("YANDEX_MAPKIT_API_KEY")
+        ?: yandexProperties.getProperty("YANDEX_MAPKIT_API_KEY")
+        ?: ""
+if (yandexMapKitApiKey.isEmpty()) {
+    logger.warn("YANDEX_MAPKIT_API_KEY berilmagan: xarita ishlamaydi (android/yandex.properties ni to'ldiring).")
+}
+
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -37,6 +52,12 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["yandexMapKitApiKey"] = yandexMapKitApiKey
+        buildConfigField("String", "YANDEX_MAPKIT_API_KEY", "\"$yandexMapKitApiKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {

@@ -1,6 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Bazadagi qiymat turi (matn/son/bool) admin paneldan boshqacha kelsa ham
+/// butun joylar ro'yxati yiqilib tushmasligi uchun bardoshli o'qish.
+String? _optString(dynamic v) {
+  if (v == null) return null;
+  final text = v.toString().trim();
+  return text.isEmpty ? null : text;
+}
+
+bool? _optBool(dynamic v) {
+  if (v is bool) return v;
+  if (v is num) return v != 0;
+  if (v is String) {
+    switch (v.trim().toLowerCase()) {
+      case 'true':
+      case '1':
+      case 'ha':
+        return true;
+      case 'false':
+      case '0':
+      case "yo'q":
+        return false;
+    }
+  }
+  return null;
+}
+
+double _numOr(dynamic v, double fallback) {
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v.trim()) ?? fallback;
+  return fallback;
+}
+
 class PlaceModel {
   final String id;
   final String name;
@@ -17,6 +49,10 @@ class PlaceModel {
   final DateTime? createdAt;
   final String? routeFileUrl;
   final String? videoUrl;
+
+  /// Video muallifi (admin kiritadi): havola va ixtiyoriy ko'rinadigan nom.
+  final String? videoAuthorUrl;
+  final String? videoAuthorName;
   final String? phone;
   final String? trekDifficulty;
   final String? trekLength;
@@ -40,6 +76,8 @@ class PlaceModel {
     this.createdAt,
     this.routeFileUrl,
     this.videoUrl,
+    this.videoAuthorUrl,
+    this.videoAuthorName,
     this.phone,
     this.trekDifficulty,
     this.trekLength,
@@ -58,22 +96,25 @@ class PlaceModel {
       region: d['region'] ?? '',
       type: d['type'] ?? '',
       seasonTypes: List<String>.from(d['seasonTypes'] ?? []),
-      lat: (d['lat'] ?? 0.0).toDouble(),
-      lng: (d['lng'] ?? 0.0).toDouble(),
+      lat: _numOr(d['lat'], 0.0),
+      lng: _numOr(d['lng'], 0.0),
       images: List<String>.from(d['images'] ?? []),
       description: d['description'] ?? '',
       tags: List<String>.from(d['tags'] ?? []),
-      baseRating: (d['baseRating'] ?? 4.0).toDouble(),
+      baseRating: _numOr(d['baseRating'], 4.0),
       isPublished: d['isPublished'] ?? false,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
-      routeFileUrl: d['routeFileUrl'] as String?,
-      videoUrl: d['videoUrl'] as String?,
-      phone: d['phone'] as String?,
-      trekDifficulty: d['trekDifficulty'] as String?,
-      trekLength: d['trekLength'] as String?,
-      trekElevationGain: (d['trekElevationGain'] ?? d['trekElevation']) as String?,
-      trekHeight: d['trekHeight'] as String?,
-      requiresPermit: d['requiresPermit'] as bool?,
+      routeFileUrl: _optString(d['routeFileUrl']),
+      videoUrl: _optString(d['videoUrl']),
+      videoAuthorUrl: _optString(d['videoAuthorUrl']),
+      videoAuthorName: _optString(d['videoAuthorName']),
+      phone: _optString(d['phone']),
+      trekDifficulty: _optString(d['trekDifficulty']),
+      trekLength: _optString(d['trekLength']),
+      trekElevationGain:
+          _optString(d['trekElevationGain'] ?? d['trekElevation']),
+      trekHeight: _optString(d['trekHeight']),
+      requiresPermit: _optBool(d['requiresPermit']),
     );
   }
 
@@ -92,6 +133,8 @@ class PlaceModel {
     'createdAt': FieldValue.serverTimestamp(),
     if (routeFileUrl != null) 'routeFileUrl': routeFileUrl,
     if (videoUrl != null) 'videoUrl': videoUrl,
+    if (videoAuthorUrl != null) 'videoAuthorUrl': videoAuthorUrl,
+    if (videoAuthorName != null) 'videoAuthorName': videoAuthorName,
     if (phone != null) 'phone': phone,
     if (trekDifficulty != null) 'trekDifficulty': trekDifficulty,
     if (trekLength != null) 'trekLength': trekLength,

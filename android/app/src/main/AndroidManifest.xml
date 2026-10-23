@@ -11,11 +11,10 @@
         android:label="NatureGo"
         android:icon="@mipmap/ic_launcher">
 
-        <!-- ─── Yandex MapKit API Key ──────────────────── -->
-        <!--  ⚠️  Bu yerga O'Z Yandex MapKit API kalitingizni kiriting  -->
+        <!-- Yandex MapKit kaliti build.gradle.kts orqali beriladi (gitda saqlanmaydi) -->
         <meta-data
             android:name="com.yandex.android.maps.API_KEY"
-            android:value="06f03346-42b9-46b5-af30-46b8f6ebdfb5"/>
+            android:value="${yandexMapKitApiKey}"/>
 
         <activity
             android:name=".MainActivity"

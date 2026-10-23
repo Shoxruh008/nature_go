@@ -3,7 +3,7 @@ name: Build Unsigned IPA
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build:
@@ -23,6 +23,9 @@ jobs:
 
       - name: Paketlarni olish
         run: flutter pub get
+
+      - name: Yandex MapKit kalitini yozish
+        run: echo "YANDEX_MAPKIT_API_KEY=${{ secrets.YANDEX_MAPKIT_API_KEY }}" > ios/Flutter/Secrets.xcconfig
 
       - name: iOS uchun imzosiz build
         run: flutter build ios --release --no-codesign

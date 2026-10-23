@@ -10,6 +10,10 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Yandex MapKit kalitini yozish
+        script: |
+          echo "YANDEX_MAPKIT_API_KEY=$YANDEX_MAPKIT_API_KEY" > ios/Flutter/Secrets.xcconfig
+
       - name: Pod install
         script: |
           cd ios && pod install

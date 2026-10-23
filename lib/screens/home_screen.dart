@@ -8,6 +8,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../main.dart';
 import '../models/place_model.dart';
 import '../services/firebase_service.dart';
+import '../utils/place_search.dart';
 import '../services/location_service.dart';
 import '../widgets/favourite_button.dart';
 import 'detail_screen.dart';
@@ -84,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _userPos = pos;
           _cityName = city ?? "Noma'lum";
           _locationLoading = false;
-          _applyFiltersInner();
+          _applyFiltersInner(resetPaging: false);
         });
       } else if (mounted) {
         setState(() {
@@ -111,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _allPlaces = places;
           _loading = false;
           _networkError = false;
-          _applyFiltersInner();
+          _applyFiltersInner(resetPaging: false);
         });
       }
     }, onError: (_) {
@@ -119,7 +120,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _applyFiltersInner() {
+  /// [resetPaging] faqat foydalanuvchi filtrni o'zgartirganda `true` bo'ladi;
+  /// Firestore yangilanishi yoki joylashuv topilganda "Ko'proq ko'rish" bilan
+  /// ochilgan joylar yopilib qolmasligi uchun `false`.
+  void _applyFiltersInner({bool resetPaging = true}) {
     List<PlaceModel> result = List.from(_allPlaces);
 
     if (_selectedType != 'all') {
@@ -129,13 +133,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       result = result.where((p) => p.seasonTypes.contains(_selectedSeason)).toList();
     }
     if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      result = result
-          .where((p) =>
-      p.name.toLowerCase().contains(q) ||
-          p.region.toLowerCase().contains(q) ||
-          p.tags.any((t) => t.contains(q)))
-          .toList();
+      result = result.where((p) => placeMatchesQuery(p, _searchQuery)).toList();
     }
 
     if (_userPos != null) {
@@ -153,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     _filtered = result;
-    _visibleCount = _pageSize;
+    if (resetPaging) _visibleCount = _pageSize;
     _hasMore = _filtered.length > _visibleCount;
   }
 

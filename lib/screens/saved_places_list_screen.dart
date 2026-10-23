@@ -8,6 +8,8 @@ import '../models/place_model.dart';
 import '../services/firebase_service.dart';
 import '../services/saved_places_service.dart';
 import '../utils/confirm_dialog.dart';
+import '../utils/date_format.dart';
+import '../widgets/visit_date_dialog.dart';
 import 'detail_screen.dart';
 
 /// Joy ro'yxatlarini (sevimlilar, borgan joylar, bormoqchi bo'lgan joylar)
@@ -35,6 +37,13 @@ class SavedPlacesListScreen extends StatefulWidget {
   final Color? moveToBg;
   final String? moveToSuffix;
 
+  /// `true` bo'lsa, ko'chirishda "Qachon bordingiz?" sanasi so'raladi.
+  final bool moveAsksDate;
+
+  /// `true` bo'lsa, kartada sana ko'rsatiladi (bosilsa tahrirlanadi) va
+  /// ro'yxat sana bo'yicha (yangisi birinchi) tartiblanadi.
+  final bool showDate;
+
   const SavedPlacesListScreen({
     super.key,
     required this.title,
@@ -53,6 +62,8 @@ class SavedPlacesListScreen extends StatefulWidget {
     this.moveToColor,
     this.moveToBg,
     this.moveToSuffix,
+    this.moveAsksDate = false,
+    this.showDate = false,
   });
 
   @override
@@ -66,6 +77,9 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
 
   List<PlaceModel> _places = [];
   bool _loading = true;
+
+  /// Svayp bilan ko'chirishda sana `confirmDismiss`da tanlanadi, `onDismissed`da ishlatiladi.
+  final Map<String, DateTime> _pendingMoveDates = {};
 
   @override
   void initState() {
@@ -81,17 +95,25 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
   }
 
   void _onChanged() {
-    if (mounted) _loadPlaces();
+    if (mounted) _loadPlaces(silent: true);
   }
 
-  Future<void> _loadPlaces() async {
-    setState(() => _loading = true);
+  /// [silent] bo'lsa to'liq ekran spinneri ko'rsatilmaydi (ro'yxat joyida
+  /// yangilanadi).
+  Future<void> _loadPlaces({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final ids = await widget.service.getAll();
     final futures = ids.map((id) => FirebaseService.instance.getPlace(id));
     final results = await Future.wait(futures);
     if (!mounted) return;
+    final places = results.whereType<PlaceModel>().toList();
+    if (widget.showDate) {
+      final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+      places.sort((a, b) => (widget.service.dateOf(b.id) ?? epoch)
+          .compareTo(widget.service.dateOf(a.id) ?? epoch));
+    }
     setState(() {
-      _places = results.whereType<PlaceModel>().toList();
+      _places = places;
       _loading = false;
     });
   }
@@ -107,16 +129,13 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
     );
   }
 
-  Future<void> _doRemove(PlaceModel place) async {
-    HapticFeedback.mediumImpact();
-    await widget.service.remove(place.id);
+  void _showSnack(String message, Color color) {
     if (!mounted) return;
-    setState(() => _places.removeWhere((p) => p.id == place.id));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${place.name} ${widget.removedSuffix}',
+        content: Text(message,
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        backgroundColor: const Color(0xFFEF4444),
+        backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(16),
@@ -125,12 +144,36 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
     );
   }
 
+  /// Kartani darhol ro'yxatdan olib tashlaydi (Dismissible daraxtda
+  /// qolib ketmasligi uchun), keyin bazaga yozadi. Xato bo'lsa tiklaydi.
+  Future<void> _doRemove(PlaceModel place) async {
+    HapticFeedback.mediumImpact();
+    setState(() => _places.removeWhere((p) => p.id == place.id));
+    try {
+      await widget.service.remove(place.id);
+      _showSnack('${place.name} ${widget.removedSuffix}', const Color(0xFFEF4444));
+    } catch (_) {
+      _showSnack("Olib tashlab bo'lmadi. Qayta urinib ko'ring", const Color(0xFFEF4444));
+      if (mounted) _loadPlaces(silent: true);
+    }
+  }
+
   Future<void> _removeWithConfirm(PlaceModel place) async {
     final confirmed = await _confirmRemoval(place);
     if (confirmed) await _doRemove(place);
   }
 
   Future<bool> _confirmMove(PlaceModel place) async {
+    if (widget.moveAsksDate) {
+      final date = await showVisitDateDialog(
+        context,
+        placeName: place.name,
+        confirmLabel: widget.moveToLabel!,
+      );
+      if (date == null) return false;
+      _pendingMoveDates[place.id] = date;
+      return true;
+    }
     return showConfirmDialog(
       context,
       title: '${widget.moveToLabel} tasdiqlang',
@@ -142,26 +185,39 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
 
   Future<void> _doMove(PlaceModel place) async {
     HapticFeedback.mediumImpact();
-    await widget.moveToService!.add(place.id);
-    await widget.service.remove(place.id);
-    if (!mounted) return;
     setState(() => _places.removeWhere((p) => p.id == place.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${place.name} ${widget.moveToSuffix}',
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        backgroundColor: widget.moveToColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    try {
+      final visitedAt = _pendingMoveDates.remove(place.id);
+      await widget.service.moveTo(widget.moveToService!, place.id,
+          visitedAt: visitedAt);
+      _showSnack('${place.name} ${widget.moveToSuffix}',
+          widget.moveToColor ?? AppTheme.primary);
+    } catch (_) {
+      _showSnack("Ko'chirib bo'lmadi. Qayta urinib ko'ring", const Color(0xFFEF4444));
+      if (mounted) _loadPlaces(silent: true);
+    }
   }
 
   Future<void> _moveWithConfirm(PlaceModel place) async {
     final confirmed = await _confirmMove(place);
     if (confirmed) await _doMove(place);
+  }
+
+  Future<void> _editDate(PlaceModel place) async {
+    final picked = await showVisitDateDialog(
+      context,
+      title: 'Tashrif sanasi',
+      placeName: place.name,
+      confirmLabel: 'Saqlash',
+      initial: widget.service.dateOf(place.id),
+    );
+    if (picked == null) return;
+    try {
+      await widget.service.setVisitDate(place.id, picked);
+    } catch (_) {
+      _showSnack("Sanani saqlab bo'lmadi. Qayta urinib ko'ring",
+          const Color(0xFFEF4444));
+    }
   }
 
   void _openDetail(PlaceModel p) {
@@ -177,7 +233,7 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
           child: FadeTransition(opacity: anim, child: child),
         ),
       ),
-    ).then((_) => _loadPlaces());
+    ).then((_) => _loadPlaces(silent: true));
   }
 
   @override
@@ -215,7 +271,7 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
           ? _buildEmpty()
           : RefreshIndicator(
         color: AppTheme.primary,
-        onRefresh: _loadPlaces,
+        onRefresh: () => _loadPlaces(silent: true),
         child: ListView.builder(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
           itemCount: _places.length,
@@ -228,6 +284,8 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
   Widget _buildCard(PlaceModel p) {
     final pt = p.placeType;
     final canMove = widget.moveToService != null;
+    final date = widget.showDate ? widget.service.dateOf(p.id) : null;
+    final cardHeight = date != null ? 112.0 : 96.0;
 
     final removeBackground = Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -301,7 +359,7 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
         child: GestureDetector(
           onTap: () => _openDetail(p),
           child: Container(
-            height: 96,
+            height: cardHeight,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
@@ -319,7 +377,7 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
                   const BorderRadius.horizontal(left: Radius.circular(18)),
                   child: SizedBox(
                     width: 96,
-                    height: 96,
+                    height: cardHeight,
                     child: p.images.isNotEmpty
                         ? (kIsWeb
                         ? Image.network(p.images.first,
@@ -381,6 +439,26 @@ class _SavedPlacesListScreenState extends State<SavedPlacesListScreen>
                                     color: AppTheme.textSecondary)),
                           ),
                         ]),
+                        if (date != null) ...[
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () => _editDate(p),
+                            behavior: HitTestBehavior.opaque,
+                            child: Row(children: [
+                              const Icon(Icons.calendar_month_rounded,
+                                  size: 12, color: AppTheme.primary),
+                              const SizedBox(width: 3),
+                              Text(formatUzDate(date),
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.primary)),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.edit_rounded,
+                                  size: 10, color: AppTheme.textSecondary),
+                            ]),
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         Row(children: [
                           Container(

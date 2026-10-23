@@ -863,6 +863,12 @@ class _ReviewCard extends StatelessWidget {
   }
 
   Widget _initials(String name) {
+    // Niqoblangan telefon raqam ("+998 90 *** ** 67") uchun harf o'rniga ikonka.
+    if (name.trim().startsWith('+')) {
+      return const Center(
+        child: Icon(Icons.person_rounded, size: 18, color: AppTheme.primary),
+      );
+    }
     final parts = name.trim().split(' ');
     final letters = parts.length >= 2
         ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()

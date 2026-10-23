@@ -1,13 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'screens/auth_gate.dart';
 import 'firebase_options.dart';
-import 'services/auth_service.dart';
 import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 
@@ -16,7 +18,21 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 
-void main() async {
+/// Muhim bo'lmagan initsializatsiya xato bersa yoki osilib qolsa, ilova
+/// ochilishini to'xtatmasligi uchun.
+Future<void> _safeInit(
+  String name,
+  Future<void> Function() task, {
+  Duration timeout = const Duration(seconds: 10),
+}) async {
+  try {
+    await task().timeout(timeout);
+  } catch (e) {
+    debugPrint('$name initsializatsiyasi bajarilmadi: $e');
+  }
+}
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setSystemUIOverlayStyle(
@@ -26,29 +42,72 @@ void main() async {
     ),
   );
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
-
-  await AuthService.instance.signInAnonymously();
-  await StorageService.init();
-  await initializeDateFormatting('uz', null);
-
-
-  if (!kIsWeb) {
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    await NotificationService.instance.init();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  } catch (e) {
+    debugPrint('Firebase ishga tushmadi: $e');
+    runApp(_BootErrorApp(onRetry: main));
+    return;
   }
+
+  await _safeInit('Hive', StorageService.init);
+  await _safeInit('Sana formatlari', () => initializeDateFormatting('uz', null));
 
   PaintingBinding.instance.imageCache.maximumSize = 200;
   PaintingBinding.instance.imageCache.maximumSizeBytes = 100 << 20;
 
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
+
   runApp(const MyApp());
+
+  // Bildirishnoma ruxsati dialogi va token olish ilova ochilishini kutdirmaydi.
+  if (!kIsWeb) {
+    unawaited(_safeInit('Bildirishnomalar', NotificationService.instance.init,
+        timeout: const Duration(seconds: 20)));
+  }
+}
+
+class _BootErrorApp extends StatelessWidget {
+  final Future<void> Function() onRetry;
+  const _BootErrorApp({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off_rounded, size: 56, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text(
+                  "Ilovani ishga tushirib bo'lmadi.\nInternetni tekshirib, qayta urinib ko'ring.",
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => onRetry(),
+                  child: const Text('Qayta urinish'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -60,6 +119,9 @@ class MyApp extends StatelessWidget {
       title: 'NatureGo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      locale: const Locale('uz'),
+      supportedLocales: const [Locale('uz'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const AuthGate(),
     );
   }

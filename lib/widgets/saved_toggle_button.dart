@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../services/saved_places_service.dart';
 import '../utils/confirm_dialog.dart';
+import 'visit_date_dialog.dart';
 
 /// Joyni biror ro'yxatga (sevimlilar, borgan joylar, bormoqchi bo'lgan
 /// joylar) qo'shish/olib tashlash uchun umumiy dumaloq tugma.
@@ -23,6 +24,10 @@ class SavedToggleButton extends StatefulWidget {
   /// "borgan joylar" yoki "bormoqchi bo'lgan joylar".
   final String confirmSubject;
 
+  /// `true` bo'lsa, qo'shishda tasdiq o'rniga "Qachon bordingiz?" sana oynasi
+  /// chiqadi (borgan joylar uchun). Olib tashlashda oddiy tasdiq so'raladi.
+  final bool askDate;
+
   const SavedToggleButton({
     super.key,
     required this.service,
@@ -35,6 +40,7 @@ class SavedToggleButton extends StatefulWidget {
     this.dark = false,
     this.confirmBeforeToggle = false,
     this.confirmSubject = '',
+    this.askDate = false,
   });
 
   @override
@@ -71,22 +77,43 @@ class _SavedToggleButtonState extends State<SavedToggleButton> {
   }
 
   Future<void> _toggle() async {
+    DateTime? visitedAt;
     if (widget.confirmBeforeToggle) {
       final adding = !_isSaved;
-      final confirmed = await showConfirmDialog(
-        context,
-        title: adding ? "Qo'shishni tasdiqlang" : 'Olib tashlashni tasdiqlang',
-        message: adding
-            ? "Bu joyni ${widget.confirmSubject} ro'yxatiga qo'shmoqchimisiz?"
-            : "Bu joyni ${widget.confirmSubject} ro'yxatidan olib tashlamoqchimisiz?",
-        confirmLabel: adding ? "Qo'shish" : 'Olib tashlash',
-        destructive: !adding,
-      );
-      if (!confirmed) return;
+      if (adding && widget.askDate) {
+        visitedAt = await showVisitDateDialog(context);
+        if (visitedAt == null) return;
+      } else {
+        final confirmed = await showConfirmDialog(
+          context,
+          title: adding ? "Qo'shishni tasdiqlang" : 'Olib tashlashni tasdiqlang',
+          message: adding
+              ? "Bu joyni ${widget.confirmSubject} ro'yxatiga qo'shmoqchimisiz?"
+              : "Bu joyni ${widget.confirmSubject} ro'yxatidan olib tashlamoqchimisiz?",
+          confirmLabel: adding ? "Qo'shish" : 'Olib tashlash',
+          destructive: !adding,
+        );
+        if (!confirmed) return;
+      }
     }
     HapticFeedback.mediumImpact();
-    final newVal = await widget.service.toggle(widget.placeId);
-    if (mounted) setState(() => _isSaved = newVal);
+    try {
+      final newVal =
+          await widget.service.toggle(widget.placeId, visitedAt: visitedAt);
+      if (mounted) setState(() => _isSaved = newVal);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: const Text("Saqlab bo'lmadi. Qayta urinib ko'ring",
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
   }
 
   @override

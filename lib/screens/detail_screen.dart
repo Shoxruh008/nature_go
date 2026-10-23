@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 
 import '../services/video_service_stub.dart'
@@ -16,6 +18,9 @@ import '../models/place_model.dart';
 import '../services/firebase_service.dart';
 import '../services/location_service.dart';
 import '../services/saved_places_service.dart';
+import '../utils/author_link.dart';
+import '../utils/map_links.dart';
+import '../utils/youtube_utils.dart';
 import '../widgets/favourite_button.dart';
 import '../widgets/saved_toggle_button.dart';
 import 'comments_sheet.dart';
@@ -50,6 +55,9 @@ class _DetailScreenState extends State<DetailScreen> {
   bool _showVideo = false;
   bool _videoLoading = false;
   bool _videoTapped = false;
+  String? _videoId;
+  String? _videoError;
+  Timer? _videoTimeout;
   String? _iframeViewId;
   WebViewController? _webViewController;
 
@@ -69,10 +77,7 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   void dispose() {
     _imgCtrl.dispose();
-    try {
-      _webViewController?.loadRequest(Uri.parse('about:blank'));
-      _webViewController = null;
-    } catch (_) {}
+    _releaseVideo();
     super.dispose();
   }
 
@@ -128,13 +133,62 @@ class _DetailScreenState extends State<DetailScreen> {
     if (mounted) setState(() => _geocodedAddress = addr);
   }
 
+  /// Pleyerni to'xtatadi va resurslarni bo'shatadi (yopilgandan keyin ovoz
+  /// fonda davom etmasligi uchun).
+  void _releaseVideo() {
+    _videoTimeout?.cancel();
+    _videoTimeout = null;
+    VideoService.onPlayerError = null;
+    final ctrl = _webViewController;
+    _webViewController = null;
+    if (ctrl != null) {
+      try {
+        ctrl.loadRequest(Uri.parse('about:blank'));
+      } catch (_) {}
+    }
+  }
+
+  void _setVideoError(int code) {
+    _videoTimeout?.cancel();
+    if (!mounted || !_showVideo) return;
+    setState(() {
+      _videoLoading = false;
+      _videoError = youtubePlayerErrorMessage(code);
+    });
+  }
+
+  Future<void> _openVideoAuthor(Uri url) async {
+    try {
+      final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) _showSnack("Havolani ochib bo'lmadi", isError: true);
+    } catch (_) {
+      if (mounted) _showSnack("Havolani ochib bo'lmadi", isError: true);
+    }
+  }
+
+  Future<void> _openVideoExternally(PlaceModel p) async {
+    final id = _videoId;
+    final url = id != null ? youtubeWatchUrl(id) : p.videoUrl;
+    if (url == null) return;
+    try {
+      final ok = await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+      if (!ok && mounted) _showSnack("Videoni ochib bo'lmadi", isError: true);
+    } catch (_) {
+      if (mounted) _showSnack("Videoni ochib bo'lmadi", isError: true);
+    }
+  }
+
   void _toggleVideo(PlaceModel p) {
     HapticFeedback.lightImpact();
 
     if (_showVideo) {
+      _releaseVideo();
       setState(() {
         _showVideo = false;
         _videoTapped = false;
+        _videoLoading = false;
+        _videoError = null;
       });
       return;
     }
@@ -144,43 +198,47 @@ class _DetailScreenState extends State<DetailScreen> {
 
     final videoId = VideoService.extractId(p.videoUrl!);
     if (videoId == null) {
+      // YouTube havolasi emas: tashqi ilovada ochamiz.
       _videoTapped = false;
-      launchUrl(Uri.parse(p.videoUrl!), mode: LaunchMode.externalApplication);
+      _openVideoExternally(p);
       return;
     }
 
+    _videoId = videoId;
+    _videoError = null;
+
     if (kIsWeb) {
+      VideoService.onPlayerError = _setVideoError;
       final viewId = VideoService.getOrRegisterWebView(videoId);
       setState(() {
         _iframeViewId = viewId;
         _showVideo = true;
         _videoTapped = false;
+        _videoLoading = false;
       });
     } else {
-      setState(() => _videoLoading = true);
-
-      _webViewController?.loadRequest(Uri.parse('about:blank'));
-      _webViewController = null;
-
-      final ctrl = VideoService.buildMobileController(videoId);
-      ctrl.setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) {
-            if (mounted) setState(() => _videoLoading = false);
-          },
-          onWebResourceError: (error) {
-            debugPrint('Video error: ${error.description}');
-            if (mounted) {
-              setState(() => _videoLoading = false);
-            }
-          },
-        ),
+      _releaseVideo();
+      final ctrl = VideoService.buildMobileController(
+        videoId,
+        onReady: () {
+          _videoTimeout?.cancel();
+          if (mounted) setState(() => _videoLoading = false);
+        },
+        onError: _setVideoError,
+        onExternalLink: (url) {
+          launchUrl(url, mode: LaunchMode.externalApplication)
+              .catchError((_) => false);
+        },
       );
       _webViewController = ctrl;
+
+      // Pleyer umuman javob bermasa spinner abadiy aylanib qolmasin.
+      _videoTimeout = Timer(const Duration(seconds: 25), () => _setVideoError(-3));
 
       setState(() {
         _showVideo = true;
         _videoTapped = false;
+        _videoLoading = true;
       });
     }
   }
@@ -196,10 +254,145 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
-  Future<void> _openRouteOnlyLatLng(PlaceModel p) async {
-    await launchUrl(
-      Uri.parse('https://maps.yandex.ru/?rtext=~${p.lat},${p.lng}&rtt=auto'),
-      mode: LaunchMode.externalApplication,
+  /// Havolalarni ketma-ket sinaydi: birinchisi ochilmasa (ilova yo'q, tarmoq
+  /// xizmati to'sib qo'ygan va h.k.) keyingisiga o'tadi.
+  Future<bool> _launchFirst(List<Uri> uris) async {
+    for (final uri in uris) {
+      try {
+        if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  Future<void> _openRoute(PlaceModel p, _RouteApp app) async {
+    final isIos = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+    final List<Uri> candidates;
+    switch (app) {
+      case _RouteApp.yandex:
+        candidates = [
+          if (!kIsWeb) MapLinks.yandexApp(p.lat, p.lng),
+          MapLinks.yandexWeb(p.lat, p.lng),
+        ];
+      case _RouteApp.google:
+        candidates = [MapLinks.google(p.lat, p.lng)];
+      case _RouteApp.other:
+        candidates = [
+          if (isAndroid) MapLinks.geo(p.lat, p.lng, p.name),
+          if (isIos) MapLinks.apple(p.lat, p.lng),
+          MapLinks.openStreetMap(p.lat, p.lng),
+        ];
+    }
+
+    final ok = await _launchFirst(candidates);
+    if (!ok && mounted) {
+      _showSnack("Xaritani ochib bo'lmadi. Boshqa xaritani tanlab ko'ring",
+          isError: true);
+    }
+  }
+
+  void _showRouteOptions(PlaceModel p) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        Widget option({
+          required IconData icon,
+          required Color color,
+          required String title,
+          required String subtitle,
+          required _RouteApp app,
+        }) {
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            title: Text(title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, color: AppTheme.textMain)),
+            subtitle: Text(subtitle,
+                style: const TextStyle(
+                    fontSize: 12, color: AppTheme.textSecondary)),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.textSecondary),
+            onTap: () {
+              Navigator.pop(sheetCtx);
+              _openRoute(p, app);
+            },
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E0E0),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Text(
+                  'Marshrutni qaysi xaritada ochamiz?',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textMain),
+                ),
+                const SizedBox(height: 6),
+                option(
+                  icon: Icons.alt_route_rounded,
+                  color: const Color(0xFFFF3D00),
+                  title: 'Yandex Maps',
+                  subtitle: 'Ilova yoki brauzerda',
+                  app: _RouteApp.yandex,
+                ),
+                option(
+                  icon: Icons.map_rounded,
+                  color: const Color(0xFF1A73E8),
+                  title: 'Google Maps',
+                  subtitle: 'Ilova yoki brauzerda',
+                  app: _RouteApp.google,
+                ),
+                option(
+                  icon: Icons.explore_rounded,
+                  color: AppTheme.primary,
+                  title: 'Boshqa xarita',
+                  subtitle: kIsWeb
+                      ? 'OpenStreetMap'
+                      : "Qurilmadagi standart xarita ilovasi",
+                  app: _RouteApp.other,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -262,6 +455,9 @@ class _DetailScreenState extends State<DetailScreen> {
                 iframeViewId: _iframeViewId,
                 webViewController: _webViewController,
                 videoLoading: _videoLoading,
+                errorMessage: _videoError,
+                onOpenExternal: () => _openVideoExternally(p),
+                onOpenAuthor: _openVideoAuthor,
                 onClose: () => _toggleVideo(p),
                 onBack: () => Navigator.pop(context),
               ),
@@ -291,7 +487,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   const SizedBox(height: 14),
                   _buildTrekInfo(p),
                 ],
-                if (p.type == 'choqqilar' && p.requiresPermit != null)...[
+                if (p.type == 'choqqilar' && p.requiresPermit == true) ...[
                   const SizedBox(height: 14),
                   _buildPermitCard(),
                 ],
@@ -460,7 +656,7 @@ class _DetailScreenState extends State<DetailScreen> {
               icon: Icons.turn_right_rounded,
               label: 'Marshrut',
               color: const Color(0xFFFF6F00),
-              onTap: () => _openRouteOnlyLatLng(p),
+              onTap: () => _showRouteOptions(p),
             ),
           ),
           const SizedBox(width: 12),
@@ -1028,6 +1224,7 @@ class _HeroImageSection extends StatelessWidget {
                         activeBg: const Color(0xFFE8F5E9),
                         confirmBeforeToggle: true,
                         confirmSubject: 'borgan joylar',
+                        askDate: true,
                       ),
                       const SizedBox(width: 8),
                       SavedToggleButton(
@@ -1101,6 +1298,9 @@ class _InlineVideoSection extends StatelessWidget {
   final String? iframeViewId;
   final WebViewController? webViewController;
   final bool videoLoading;
+  final String? errorMessage;
+  final VoidCallback onOpenExternal;
+  final void Function(Uri url) onOpenAuthor;
   final VoidCallback onClose;
   final VoidCallback onBack;
 
@@ -1109,12 +1309,16 @@ class _InlineVideoSection extends StatelessWidget {
     required this.iframeViewId,
     required this.webViewController,
     required this.videoLoading,
+    required this.errorMessage,
+    required this.onOpenExternal,
+    required this.onOpenAuthor,
     required this.onClose,
     required this.onBack,
   });
 
   @override
   Widget build(BuildContext context) {
+    final authorUri = normalizeAuthorUrl(place.videoAuthorUrl);
     return Container(
       color: Colors.black,
       child: Column(
@@ -1152,8 +1356,118 @@ class _InlineVideoSection extends StatelessWidget {
           ),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 4, 0, 20),
-            child: AspectRatio(aspectRatio: 16 / 9, child: _buildVideoWidget()),
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 4),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: errorMessage != null
+                  ? _buildError()
+                  : _buildVideoWidget(),
+            ),
+          ),
+          if (authorUri != null) _buildAuthor(authorUri),
+          if (errorMessage == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: TextButton.icon(
+                onPressed: onOpenExternal,
+                icon: const Icon(Icons.open_in_new_rounded,
+                    size: 16, color: Colors.white70),
+                label: const Text(
+                  "YouTube'da ochish",
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  /// Video muallifi (admin kiritgan havola). Bosilsa havolaga o'tadi.
+  Widget _buildAuthor(Uri url) {
+    final label = authorLabel(url, name: place.videoAuthorName);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+      child: Material(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => onOpenAuthor(url),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.videocam_rounded,
+                    color: Colors.white70, size: 18),
+                const SizedBox(width: 10),
+                const Text('Video muallifi:',
+                    style: TextStyle(
+                        color: Colors.white60,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white54),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.open_in_new_rounded,
+                    color: Colors.white70, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Container(
+      color: const Color(0xFF111111),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline_rounded,
+              color: Colors.white54, size: 32),
+          const SizedBox(height: 10),
+          Text(
+            errorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton.icon(
+            onPressed: onOpenExternal,
+            icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
+            label: const Text("YouTube'da ochish"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF0000),
+              foregroundColor: Colors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+            ),
           ),
         ],
       ),
@@ -1388,3 +1702,5 @@ class _ActionBtn extends StatelessWidget {
     );
   }
 }
+
+enum _RouteApp { yandex, google, other }

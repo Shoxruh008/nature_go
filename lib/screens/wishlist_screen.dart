@@ -27,6 +27,7 @@ class WishlistScreen extends StatelessWidget {
       moveToColor: AppTheme.primary,
       moveToBg: const Color(0xFFE8F5E9),
       moveToSuffix: "borgan joylarga ko'chirildi",
+      moveAsksDate: true,
     );
   }
 }
