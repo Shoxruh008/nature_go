@@ -6,16 +6,20 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // email_verified shart: firestore.rules bilan bir xil.
+    // firestore.rules bilan bir xil (admin parol bilan kiradi, email_verified talab qilinmaydi).
     function isAdmin() {
       return request.auth != null &&
-             request.auth.token.email == 'evolution2024team@gmail.com' &&
-             request.auth.token.email_verified == true;
+             request.auth.token.email == 'evolution2024team@gmail.com';
     }
 
     function isSmallImage() {
       return request.resource.contentType.matches('image/.*')
           && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Admin panel ichma-ich yo'llarga yuklaydi (places/{id}/routes/...): o'qish hammaga ochiq.
+    match /places/{path=**} {
+      allow read: if true;
     }
 
     // Joy rasmlari (add_place_screen)

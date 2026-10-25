@@ -2,12 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // email_verified shart: Email/Password orqali boshqa odam admin emailini
-    // tasdiqlamasdan ro'yxatdan o'tib, admin huquqini olib qo'ymasligi uchun.
+    // Admin emailga parol bilan kiradi (admin panel), shuning uchun email_verified
+    // talab qilinmaydi: bu email Auth'da allaqachon mavjud, boshqa odam uni
+    // qayta ro'yxatdan o'tkaza olmaydi ("email-already-in-use").
     function isAdmin() {
       return request.auth != null &&
-             request.auth.token.email == 'evolution2024team@gmail.com' &&
-             request.auth.token.email_verified == true;
+             request.auth.token.email == 'evolution2024team@gmail.com';
     }
 
     function isAuthenticated() {
