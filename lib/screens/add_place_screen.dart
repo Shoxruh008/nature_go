@@ -7,6 +7,7 @@ import '../constants/regions.dart';
 import '../main.dart';
 import '../models/place_model.dart';
 import '../services/firebase_service.dart';
+import '../utils/author_link.dart';
 import '../services/location_service.dart';
 import 'map_picker_page.dart';
 
@@ -38,6 +39,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
   final ImagePicker _picker = ImagePicker();
 
   final _videoCtrl = TextEditingController();
+  final _videoAuthorCtrl = TextEditingController();
 
   PlatformFile? _routeFile;
   String? _routeFileName;
@@ -282,6 +284,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
         videoUrl: _videoCtrl.text.trim().isEmpty
             ? null
             : _videoCtrl.text.trim(),
+        videoAuthorUrl: _videoCtrl.text.trim().isEmpty
+            ? null
+            : normalizeAuthorUrl(_videoAuthorCtrl.text)?.toString(),
         phone: fullPhone,
         trekLength: (_selectedType == 'toglar' || _selectedType == 'choqqilar')
             ? trekLength
@@ -341,6 +346,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
     _latCtrl.dispose();
     _lngCtrl.dispose();
     _videoCtrl.dispose();
+    _videoAuthorCtrl.dispose();
     _phoneCtrl.dispose();
     _trekLengthCtrl.dispose();
     _trekElevationGainCtrl.dispose();
@@ -564,6 +570,33 @@ class _AddPlaceScreenState extends State<AddPlaceScreen>
                             'Video link (ixtiyoriy)',
                             Icons.video_call,
                           ),
+                        ),
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _videoCtrl,
+                          builder: (context, value, _) {
+                            if (value.text.trim().isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: TextFormField(
+                                controller: _videoAuthorCtrl,
+                                keyboardType: TextInputType.url,
+                                style: const TextStyle(fontSize: 13),
+                                decoration: _inputDec(
+                                  'Video muallifi havolasi (ixtiyoriy)',
+                                  Icons.person_outline_rounded,
+                                ),
+                                validator: (v) {
+                                  final text = v?.trim() ?? '';
+                                  if (text.isEmpty) return null;
+                                  return normalizeAuthorUrl(text) == null
+                                      ? "Havola noto'g'ri (masalan: https://www.youtube.com/@kanal)"
+                                      : null;
+                                },
+                              ),
+                            );
+                          },
                         ),
                       ]),
                       const SizedBox(height: 12),
